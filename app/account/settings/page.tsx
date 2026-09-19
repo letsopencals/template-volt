@@ -1,0 +1,223 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+	updateProfileSchema,
+	changePasswordSchema,
+	type UpdateProfileFormValues,
+	type ChangePasswordFormValues,
+} from '@/lib/schemas';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useFormSubmit } from '@/hooks/use-form-submit';
+
+export default function SettingsPage() {
+	const [profileLoading, setProfileLoading] = useState(true);
+	const [profileSuccess, setProfileSuccess] = useState(false);
+	const [passwordSuccess, setPasswordSuccess] = useState(false);
+	const [email, setEmail] = useState('');
+
+	const profileForm = useForm<UpdateProfileFormValues>({
+		resolver: zodResolver(updateProfileSchema),
+		defaultValues: { firstName: '', lastName: '' },
+	});
+
+	const passwordForm = useForm<ChangePasswordFormValues>({
+		resolver: zodResolver(changePasswordSchema),
+		defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+	});
+
+	const profileSubmit = useFormSubmit<UpdateProfileFormValues>(profileForm, { url: '/api/account/profile', method: 'PUT' });
+	const passwordSubmit = useFormSubmit<ChangePasswordFormValues>(passwordForm, { url: '/api/account/password', method: 'PUT' });
+
+	// Fetch profile
+	useEffect(() => {
+		async function fetchProfile() {
+			try {
+				const res = await fetch('/api/account/profile');
+				if (res.ok) {
+					const data = await res.json();
+					profileForm.reset({
+						firstName: data.firstName ?? '',
+						lastName: data.lastName ?? '',
+					});
+					setEmail(data.email ?? '');
+				}
+			} catch {
+				// silently fail
+			} finally {
+				setProfileLoading(false);
+			}
+		}
+
+		fetchProfile();
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+	const handleProfileSave = profileForm.handleSubmit(async (data) => {
+		const result = await profileSubmit.submit({ firstName: data.firstName, lastName: data.lastName });
+		if (result !== null) {
+			setProfileSuccess(true);
+			setTimeout(() => setProfileSuccess(false), 3000);
+		}
+	});
+
+	const handlePasswordChange = passwordForm.handleSubmit(async (data) => {
+		const result = await passwordSubmit.submit({ currentPassword: data.currentPassword, newPassword: data.newPassword });
+		if (result !== null) {
+			setPasswordSuccess(true);
+			passwordForm.reset();
+			setTimeout(() => setPasswordSuccess(false), 3000);
+		}
+	});
+
+	return (
+		<div>
+			<h1 className="font-display text-3xl font-semibold text-[var(--color-ink)]">Settings</h1>
+			<p className="mt-2 text-sm text-[var(--color-ink-muted)]">Manage your profile and security</p>
+
+			<div className="mt-8 space-y-8">
+				{/* Profile Section */}
+				<div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
+					<h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)]">Profile</h2>
+
+					{profileLoading ? (
+						<div className="mt-6 space-y-4">
+							<div className="h-12 animate-pulse rounded bg-[var(--color-surface)]" />
+							<div className="h-12 animate-pulse rounded bg-[var(--color-surface)]" />
+						</div>
+					) : (
+						<Form {...profileForm}>
+							<form onSubmit={handleProfileSave}>
+								<div className="mt-6 space-y-4">
+									<div>
+										<label className="mb-1 block text-xs font-medium text-[var(--color-ink-muted)]">Email</label>
+										<input
+											type="email"
+											value={email}
+											disabled
+											className="w-full rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]/30 px-4 py-3 text-sm text-[var(--color-ink-muted)]"
+										/>
+									</div>
+									<div className="grid gap-4 sm:grid-cols-2">
+										<FormField
+											control={profileForm.control}
+											name="firstName"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel className="mb-0 text-xs font-medium normal-case tracking-normal text-[var(--color-ink-muted)]">First Name</FormLabel>
+													<FormControl>
+														<Input {...field} type="text" />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={profileForm.control}
+											name="lastName"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel className="mb-0 text-xs font-medium normal-case tracking-normal text-[var(--color-ink-muted)]">Last Name</FormLabel>
+													<FormControl>
+														<Input {...field} type="text" />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									</div>
+								</div>
+
+								{profileSubmit.error && (
+									<div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-300">
+										{profileSubmit.error}
+									</div>
+								)}
+								{profileSuccess && (
+									<div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-400">
+										Profile updated successfully.
+									</div>
+								)}
+
+								<Button type="submit" variant="primary" className="mt-6" disabled={profileSubmit.isSubmitting}>
+									{profileSubmit.isSubmitting ? 'Saving...' : 'Save Changes'}
+								</Button>
+							</form>
+						</Form>
+					)}
+				</div>
+
+				{/* Password Section */}
+				<div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
+					<h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)]">Change Password</h2>
+
+					<Form {...passwordForm}>
+						<form onSubmit={handlePasswordChange}>
+							<div className="mt-6 space-y-4">
+								<FormField
+									control={passwordForm.control}
+									name="currentPassword"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel className="mb-0 text-xs font-medium normal-case tracking-normal text-[var(--color-ink-muted)]">
+												Current Password <span className="text-[var(--color-ink-muted)]/50">(leave empty if not set)</span>
+											</FormLabel>
+											<FormControl>
+												<Input {...field} type="password" placeholder="Current password" />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={passwordForm.control}
+									name="newPassword"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel className="mb-0 text-xs font-medium normal-case tracking-normal text-[var(--color-ink-muted)]">New Password</FormLabel>
+											<FormControl>
+												<Input {...field} type="password" placeholder="Min. 6 characters" />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={passwordForm.control}
+									name="confirmPassword"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel className="mb-0 text-xs font-medium normal-case tracking-normal text-[var(--color-ink-muted)]">Confirm New Password</FormLabel>
+											<FormControl>
+												<Input {...field} type="password" placeholder="Confirm new password" />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+
+							{passwordSubmit.error && (
+								<div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs text-red-300">
+									{passwordSubmit.error}
+								</div>
+							)}
+							{passwordSuccess && (
+								<div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs text-emerald-400">
+									Password changed successfully.
+								</div>
+							)}
+
+							<Button type="submit" variant="primary" className="mt-6" disabled={passwordSubmit.isSubmitting}>
+								{passwordSubmit.isSubmitting ? 'Changing...' : 'Change Password'}
+							</Button>
+						</form>
+					</Form>
+				</div>
+			</div>
+		</div>
+	);
+}

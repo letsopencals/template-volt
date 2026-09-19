@@ -1,0 +1,373 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+/*
+ * VOLT Padel & Squash Club — dark, technical, high-energy theme (near-black +
+ * electric orange + steel), inspired by modern sport-club design.
+ *
+ * Token names describe what each color IS (kept from the shared template scaffold
+ * so components port cleanly); the VALUES are the dark+orange club palette:
+ *   --color-bg*       near-black page surfaces (page + deep)
+ *   --color-surface*  raised card surfaces (dark grays)
+ *   --color-ink*      text (near-white → steel → dim gray)
+ *   --color-primary*  electric orange (buttons, links, accents)
+ *   --color-tint*     dark orange chip/highlight tints
+ *   --color-brass*    orange secondary accent (ratings, glows, selected states)
+ *   --color-sand      section background a touch off the page black
+ *   --color-line*     light hairline borders on dark
+ */
+@theme {
+	/* Surfaces — near-black with subtle steps */
+	--color-bg: #0A0A0A;
+	--color-bg-deep: #050505;
+	--color-surface: #141414;
+	--color-surface-2: #1C1C1C;
+	--color-surface-3: #262626;
+
+	/* Ink — near-white → steel → dim */
+	--color-ink: #FAFAFA;
+	--color-ink-muted: #A3A3A3;
+	--color-ink-dim: #6B6B6B;
+
+	/* Near-black used for modal backdrops (bg-charcoal/50) and tints. */
+	--color-charcoal: #000000;
+
+	/* Accent — electric orange */
+	--color-primary: #FF4A1C;
+	--color-primary-bright: #FF6B42;
+	--color-primary-dark: #D63910;
+
+	/* Dark orange tints for chips / highlights */
+	--color-tint: #2A1409;
+	--color-tint-strong: #3D1C0C;
+
+	/* Orange secondary accent — ratings, glows, selected-state soft backgrounds. */
+	--color-brass: #FF7A2E;
+	--color-brass-soft: #2A1409;
+
+	/* Section background a touch off the page black */
+	--color-sand: #101010;
+
+	/* Steel accents (repurposed from the scaffold's green tokens) — used for
+	 * secondary/cool highlights so squash vs padel can read differently. */
+	--color-sage: #5B93A8;
+	--color-sage-bright: #7FB3C6;
+	--color-leaf: #3E7183;
+	--color-leaf-deep: #2A5666;
+	--color-sage-soft: #10242B;
+
+	--color-line: rgba(255, 255, 255, 0.10);
+	--color-line-strong: rgba(255, 255, 255, 0.18);
+
+	/* Typography — technical: mono display + geometric sans body */
+	--font-display: 'JetBrains Mono', ui-monospace, monospace;
+	--font-body: 'Space Grotesk', system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+	/* Animations */
+	--animate-fade-up: fade-up 0.8s ease both;
+	--animate-fade-in: fade-in 0.8s ease both;
+	--animate-marquee: marquee 25s linear infinite;
+	--animate-pulse-primary: pulse-primary 1.6s ease-in-out infinite;
+	--animate-sway: sway 6s ease-in-out infinite;
+	--animate-sway-slow: sway 9s ease-in-out infinite;
+	--animate-float-soft: float-soft 7s ease-in-out infinite;
+	--animate-light-drift: light-drift 12s ease-in-out infinite;
+	--animate-grow-line: grow-line 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+	/* Spacing */
+	--spacing-section: 8rem;
+	--spacing-section-sm: 5rem;
+}
+
+/* Base styles */
+html {
+	scroll-behavior: smooth;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	font-family: var(--font-body);
+	color: var(--color-ink);
+	background-color: var(--color-bg);
+}
+
+/* Selection */
+::selection {
+	background-color: var(--color-primary);
+	color: #FFFFFF;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--color-bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--color-surface-3);
+	border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-ink-dim);
+}
+
+/* Hide scrollbar for horizontal strips */
+.no-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+.no-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+/* Display heading utility */
+.heading-display {
+	font-family: var(--font-display);
+	font-weight: 700;
+	line-height: 1.02;
+	letter-spacing: -0.02em;
+}
+
+.heading-display-italic {
+	font-family: var(--font-display);
+	font-style: italic;
+	font-weight: 600;
+	line-height: 1.02;
+	letter-spacing: -0.01em;
+}
+
+/* Image placeholder gradient (light-theme).
+ * Uses background-image (not the `background:` shorthand) so combining this class
+ * with Tailwind's `bg-cover` / `bg-center` doesn't get its size/position reset. */
+.image-placeholder {
+	background-image:
+		linear-gradient(135deg, rgba(255, 74, 28, 0.14) 0%, rgba(255, 255, 255, 0) 55%),
+		linear-gradient(135deg, var(--color-surface-2) 0%, var(--color-surface-3) 100%);
+}
+
+/* Horizontal rule accent */
+.hr-accent {
+	height: 2px;
+	background-color: var(--color-primary);
+	border: none;
+}
+
+/* Dotted leader line ("service ........ $price") */
+.leader-line {
+	flex: 1;
+	margin: 0 1rem;
+	border-bottom: 1px dotted var(--color-line-strong);
+	transform: translateY(-4px);
+}
+
+/* Link hover animation */
+.link-underline {
+	position: relative;
+	display: inline-block;
+}
+
+.link-underline::after {
+	content: '';
+	position: absolute;
+	bottom: -2px;
+	left: 0;
+	width: 0;
+	height: 1.5px;
+	background-color: currentColor;
+	transition: width 0.3s ease;
+}
+
+.link-underline:hover::after {
+	width: 100%;
+}
+
+/* Subtle grid texture overlay for tinted sections */
+.noise-overlay {
+	position: relative;
+}
+
+.noise-overlay::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	opacity: 0.5;
+	background-image:
+		linear-gradient(var(--color-line) 1px, transparent 1px),
+		linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+	background-size: 44px 44px;
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* Vertical writing for the "BOOK NOW" rail */
+.writing-vertical {
+	writing-mode: vertical-rl;
+	transform: rotate(180deg);
+}
+
+/* Soft elevation for cards */
+.card-shadow {
+	box-shadow: 0 1px 2px rgba(60, 48, 30, 0.04), 0 12px 32px -12px rgba(60, 48, 30, 0.14);
+}
+
+/* Rounded card elevation (Denty-style soft cards) */
+.card-shadow-lg {
+	box-shadow: 0 2px 4px rgba(60, 48, 30, 0.04), 0 24px 60px -24px rgba(60, 48, 30, 0.22);
+}
+
+/*
+ * Liquid glass — translucent panels with a backdrop blur, used as accents over
+ * photography (hero stat cards, sticky nav, floating chips). Kept tasteful, not
+ * everywhere. `.glass` sits on light/photo backgrounds; `.glass-dark` for glass
+ * over the medical-blue gradient.
+ */
+.glass {
+	background: rgba(20, 20, 20, 0.55);
+	backdrop-filter: blur(18px) saturate(160%);
+	-webkit-backdrop-filter: blur(18px) saturate(160%);
+	border: 1px solid rgba(255, 255, 255, 0.10);
+	box-shadow: 0 8px 32px -10px rgba(0, 0, 0, 0.6);
+}
+
+.glass-strong {
+	background: rgba(15, 15, 15, 0.8);
+	backdrop-filter: blur(24px) saturate(180%);
+	-webkit-backdrop-filter: blur(24px) saturate(180%);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	box-shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.7);
+}
+
+.glass-dark {
+	background: rgba(255, 255, 255, 0.06);
+	backdrop-filter: blur(16px) saturate(150%);
+	-webkit-backdrop-filter: blur(16px) saturate(150%);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	box-shadow: 0 8px 32px -12px rgba(0, 0, 0, 0.5);
+}
+
+.glass-nav {
+	background: rgba(10, 10, 10, 0.72);
+	backdrop-filter: blur(20px) saturate(180%);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	/* Soft border on ALL sides. Without this, a bare Tailwind `border`/`!border`
+	   utility sets width on every side but leaves the color at `currentColor`
+	   (Tailwind v4 default), producing mismatched borders. */
+	border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+/* Soft radial "aura" backdrops behind hero / CTA sections */
+.aura-blue {
+	background:
+		radial-gradient(60% 55% at 78% 12%, rgba(193, 146, 74, 0.18) 0%, rgba(193, 146, 74, 0) 60%),
+		radial-gradient(50% 50% at 8% 90%, rgba(33, 110, 144, 0.12) 0%, rgba(33, 110, 144, 0) 55%);
+}
+
+/* Organic aura — a warmer, living cousin of .aura-blue that layers a soft sage
+ * glow with brass + blue, for the redesigned hero / botanical sections. */
+.aura-organic {
+	background:
+		radial-gradient(55% 50% at 82% 8%, rgba(193, 146, 74, 0.20) 0%, rgba(193, 146, 74, 0) 58%),
+		radial-gradient(48% 55% at 10% 18%, rgba(124, 154, 110, 0.22) 0%, rgba(124, 154, 110, 0) 60%),
+		radial-gradient(60% 60% at 20% 100%, rgba(33, 110, 144, 0.10) 0%, rgba(33, 110, 144, 0) 55%);
+}
+
+/* Soft leaf-green gradient for botanical accents / 3D lighting parity. */
+.gradient-leaf {
+	background: linear-gradient(135deg, var(--color-leaf-deep) 0%, var(--color-leaf) 50%, var(--color-sage) 120%);
+}
+
+/* Medical-blue gradient used on CTA bands / telehealth panels — kept all-blue so
+ * it stays clean against the warm surfaces (no muddy blue→brass mix). */
+.gradient-medical {
+	background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 55%, var(--color-primary-bright) 120%);
+}
+
+/* Pill chip for department / category tags */
+.chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	border-radius: 9999px;
+	padding: 0.4rem 0.85rem;
+	font-size: 0.72rem;
+	font-weight: 600;
+	background: var(--color-brass-soft);
+	color: var(--color-primary);
+}
+
+/* Keyframes */
+@keyframes fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes marquee {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes pulse-primary {
+	0%, 100% {
+		box-shadow: 0 0 0 0 rgba(33, 110, 144, 0.4);
+	}
+	50% {
+		box-shadow: 0 0 0 8px rgba(33, 110, 144, 0);
+	}
+}
+
+/* Gentle botanical sway — for plant leaves / organic SVG groups.
+ * transform-origin should be set at the base (bottom) of the element. */
+@keyframes sway {
+	0%, 100% { transform: rotate(-1.6deg); }
+	50% { transform: rotate(1.8deg); }
+}
+
+/* Slow vertical float — floating glass cards / 3D-feeling chips. */
+@keyframes float-soft {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-10px); }
+}
+
+/* Drifting light shaft — subtle opacity + skew shimmer for window light. */
+@keyframes light-drift {
+	0%, 100% { opacity: 0.35; transform: translateX(-2%) skewX(-6deg); }
+	50% { opacity: 0.6; transform: translateX(2%) skewX(-6deg); }
+}
+
+/* Animated stroke draw — for the "leaf/pulse line" weaving through headings.
+ * Pair with stroke-dasharray/offset set inline on the path. */
+@keyframes grow-line {
+	from { stroke-dashoffset: var(--line-length, 1000); }
+	to { stroke-dashoffset: 0; }
+}
+
+/* Respect reduced-motion: kill the infinite ambient loops. */
+@media (prefers-reduced-motion: reduce) {
+	.motion-safe-only { animation: none !important; }
+}
