@@ -5,6 +5,7 @@ import type { CourtGridCourt } from '@/app/api/courts/[collection]/route';
 import type { DurationOption, GridColumn } from '@/hooks/use-court-grid';
 import { nowInTimezone } from '@/hooks/use-court-grid';
 import { DurationPopover } from '@/components/booking/duration-popover';
+import { AnchoredPopover, type AnchorRect } from '@/components/booking/anchored-popover';
 
 interface CourtGridProps {
 	courts: CourtGridCourt[];
@@ -24,14 +25,27 @@ interface CourtGridProps {
 interface OpenCell {
 	courtId: string;
 	columnKey: string;
-	x: number;
-	y: number;
+	/** Viewport rect of the clicked cell — the popover is `position: fixed` off it. */
+	anchor: AnchorRect;
+}
+
+/** Smallest duration option spanning at least `span` cells (options only ever cover
+ *  consecutive free cells, so a span crossing a booked cell finds nothing). */
+function optionCovering(options: DurationOption[], span: number): DurationOption | null {
+	let best: DurationOption | null = null;
+	for (const o of options) if (o.units >= span && (!best || o.units < best.units)) best = o;
+	return best;
 }
 
 // Fixed cell + sticky-label widths. One place so header / rows / now-line align.
 const CELL_W = 56; // px — the bigger, comfortable blocks
 const CELL_GAP = 4; // px
 const LABEL_W = 128; // px — sticky court-name column
+const CELL_STYLE: React.CSSProperties = { width: CELL_W };
+const BOOKED_CELL_STYLE: React.CSSProperties = {
+	width: CELL_W,
+	backgroundImage: 'repeating-linear-gradient(45deg, var(--color-surface-3) 0 3px, transparent 3px 6px)',
+};
 
 /** Live minutes-since-midnight in `timezone` if `date` is today, else null. */
 function todayNowMinutes(date: string, timezone: string): number | null {
@@ -59,6 +73,7 @@ export function CourtGrid({
 	const [pickedUnits, setPickedUnits] = useState<number | null>(null);
 	const [hoverUnits, setHoverUnits] = useState<number | null>(null);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const popoverRef = useRef<HTMLDivElement>(null);
 	const didAutoScroll = useRef<string | null>(null);
 
 	// Live "now" minutes — re-evaluated each minute so the cursor drifts.
@@ -88,22 +103,40 @@ export function CourtGrid({
 		el.scrollTo({ left: target, behavior: 'auto' });
 	}, [date, slotsLoading, nowX, columns.length]);
 
-	// Close the popover on scroll/resize (its anchor would drift).
+	// While open: close on any scroll (grid or page — capture catches both) / resize,
+	// since the fixed popover's anchor would drift; on Escape; and on a press outside
+	// the popover. Presses on free grid cells are left to the cell's own click handler
+	// (pick a duration / move the popover / toggle closed). No full-screen backdrop, so
+	// the grid cells stay hoverable for the cell → popover preview.
+	const isOpen = open !== null;
 	useEffect(() => {
-		if (!open) return;
-		const el = scrollRef.current;
-		const onMove = () => {
+		if (!isOpen) return;
+		const close = () => {
 			setOpen(null);
 			setPickedUnits(null);
 			setHoverUnits(null);
 		};
-		el?.addEventListener('scroll', onMove, { passive: true });
-		window.addEventListener('resize', onMove);
-		return () => {
-			el?.removeEventListener('scroll', onMove);
-			window.removeEventListener('resize', onMove);
+		const onPointerDown = (e: PointerEvent) => {
+			const target = e.target as Element | null;
+			if (!target) return;
+			if (popoverRef.current?.contains(target)) return;
+			if (target.closest('[data-court-cell]')) return;
+			close();
 		};
-	}, [open]);
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') close();
+		};
+		window.addEventListener('scroll', close, { passive: true, capture: true });
+		window.addEventListener('resize', close);
+		document.addEventListener('pointerdown', onPointerDown);
+		document.addEventListener('keydown', onKey);
+		return () => {
+			window.removeEventListener('scroll', close, { capture: true });
+			window.removeEventListener('resize', close);
+			document.removeEventListener('pointerdown', onPointerDown);
+			document.removeEventListener('keydown', onKey);
+		};
+	}, [isOpen]);
 
 	if (error) {
 		return (
@@ -144,21 +177,43 @@ export function CourtGrid({
 		setHoverUnits(null);
 	};
 
+	// The duration a cell of the open row stands for: the smallest option covering
+	// the open cell through this one. Null for other rows / cells before the start.
+	const optionForCell = (courtId: string, colIndex: number): DurationOption | null => {
+		if (!open || courtId !== open.courtId || openColIndex < 0 || colIndex < openColIndex) return null;
+		return optionCovering(openOptions, colIndex - openColIndex + 1);
+	};
+
+	// Cell → popover preview: hovering a cell of the open row previews (and lights in
+	// the popover) the duration reaching it. Mouse only; touch just taps (handled in click).
+	const handleCellHover = (courtId: string, colIndex: number) => {
+		if (!open || courtId !== open.courtId) return;
+		setHoverUnits(optionForCell(courtId, colIndex)?.units ?? null);
+	};
+
 	const handleCellClick = (
 		e: React.MouseEvent<HTMLButtonElement>,
 		courtId: string,
 		columnKey: string,
+		colIndex: number,
 	) => {
-		const container = scrollRef.current;
-		if (!container) return;
-		const cell = e.currentTarget.getBoundingClientRect();
-		const box = container.getBoundingClientRect();
-		const x = cell.left - box.left + container.scrollLeft + cell.width / 2;
-		const y = cell.bottom - box.top + container.scrollTop;
 		const sameCell = open && open.courtId === courtId && open.columnKey === columnKey;
-		setPickedUnits(sameCell ? pickedUnits : null);
+		if (sameCell) {
+			closePopover();
+			return;
+		}
+		// A cell further along the open row picks the duration reaching it (Confirm
+		// still commits). Out of reach → falls through to opening a popover there.
+		const reach = colIndex > openColIndex ? optionForCell(courtId, colIndex) : null;
+		if (reach) {
+			setPickedUnits(reach.units);
+			setHoverUnits(reach.units);
+			return;
+		}
+		const r = e.currentTarget.getBoundingClientRect();
+		setPickedUnits(null);
 		setHoverUnits(null);
-		setOpen(sameCell ? null : { courtId, columnKey, x, y });
+		setOpen({ courtId, columnKey, anchor: { left: r.left, top: r.top, bottom: r.bottom, width: r.width } });
 	};
 
 	return (
@@ -221,7 +276,12 @@ export function CourtGrid({
 					{/* Court rows */}
 					<div className="mt-1.5 space-y-1.5 pb-1">
 						{courts.map((court) => (
-							<div key={court.id} className="flex items-center" style={{ gap: CELL_GAP }}>
+							<div
+								key={court.id}
+								className="flex items-center"
+								style={{ gap: CELL_GAP }}
+								onMouseLeave={open?.courtId === court.id ? () => setHoverUnits(null) : undefined}
+							>
 								{/* Sticky glass court label */}
 								<div
 									className="glass-strong sticky left-0 z-20 flex shrink-0 items-center gap-2 rounded-lg px-3 py-2"
@@ -249,28 +309,36 @@ export function CourtGrid({
 										);
 									}
 									const available = slotAt(court.id, col.key) !== null;
-									const isOpen = open?.courtId === court.id && open?.columnKey === col.key;
+									// Booked cells are plain divs, not disabled buttons: disabled
+									// buttons may swallow mouse events, which would leave a stale
+									// preview while hovering across them.
+									if (!available) {
+										return (
+											<div
+												key={col.key}
+												aria-hidden
+												onMouseEnter={() => handleCellHover(court.id, colIndex)}
+												className="h-10 shrink-0 cursor-not-allowed rounded-md border border-transparent"
+												style={BOOKED_CELL_STYLE}
+											/>
+										);
+									}
+									const isOpenCell = open?.courtId === court.id && open?.columnKey === col.key;
 									const inPreview = isPreviewCell(court.id, colIndex);
 									return (
 										<button
 											key={col.key}
 											type="button"
-											disabled={!available}
-											onClick={(e) => handleCellClick(e, court.id, col.key)}
+											data-court-cell
+											onClick={(e) => handleCellClick(e, court.id, col.key, colIndex)}
+											onMouseEnter={() => handleCellHover(court.id, colIndex)}
 											aria-label={`${court.variantTitle} at ${col.label}`}
 											className={`h-10 shrink-0 rounded-md border transition-all ${
-												isOpen || inPreview
+												isOpenCell || inPreview
 													? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
-													: available
-														? 'border-[var(--color-line-strong)] bg-[var(--color-bg)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/20'
-														: 'cursor-not-allowed border-transparent'
+													: 'border-[var(--color-line-strong)] bg-[var(--color-bg)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/20'
 											}`}
-											style={{
-												width: CELL_W,
-												...(available || inPreview
-													? undefined
-													: { backgroundImage: 'repeating-linear-gradient(45deg, var(--color-surface-3) 0 3px, transparent 3px 6px)' }),
-											}}
+											style={CELL_STYLE}
 										/>
 									);
 								})}
@@ -279,30 +347,29 @@ export function CourtGrid({
 					</div>
 				</div>
 
-				{/* Duration popover, anchored under the clicked cell. Durations are picked
-				    (previewing spanned cells) and committed via Confirm. */}
+				{/* Duration popover: portalled + position:fixed off the clicked cell so the
+				    scroll container can't clip it (flips above near the bottom). Durations
+				    are picked (previewing spanned cells) and committed via Confirm. */}
 				{open && openCourt && openColumn ? (
-					<>
-						<div className="fixed inset-0 z-30" onClick={closePopover} aria-hidden />
-						<div className="absolute z-40 -translate-x-1/2" style={{ left: open.x, top: open.y + 6 }}>
-							<DurationPopover
-								courtTitle={`${openCourt.title} · ${openCourt.variantTitle}`}
-								startLabel={openColumn.label}
-								options={openOptions}
-								currency={currency}
-								pickedUnits={pickedUnits}
-								onPick={(opt) => setPickedUnits(opt.units)}
-								onHover={setHoverUnits}
-								onConfirm={() => {
-									const opt = openOptions.find((o) => o.units === pickedUnits);
-									if (!opt) return;
-									onSelect(openCourt, opt);
-									closePopover();
-								}}
-								onClose={closePopover}
-							/>
-						</div>
-					</>
+					<AnchoredPopover ref={popoverRef} anchor={open.anchor}>
+						<DurationPopover
+							courtTitle={`${openCourt.title} · ${openCourt.variantTitle}`}
+							startLabel={openColumn.label}
+							options={openOptions}
+							currency={currency}
+							pickedUnits={pickedUnits}
+							hoverUnits={hoverUnits}
+							onPick={(opt) => setPickedUnits(opt.units)}
+							onHover={setHoverUnits}
+							onConfirm={() => {
+								const opt = openOptions.find((o) => o.units === pickedUnits);
+								if (!opt) return;
+								onSelect(openCourt, opt);
+								closePopover();
+							}}
+							onClose={closePopover}
+						/>
+					</AnchoredPopover>
 				) : null}
 			</div>
 		</div>

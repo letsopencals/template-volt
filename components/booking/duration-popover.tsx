@@ -15,6 +15,7 @@ function durationLabel(minutes: number): string {
  * Anchored popover shown after a grid cell is clicked. Durations that fit from that
  * cell are *selected* (not booked) on click — hovering/selecting previews the spanned
  * slots on the grid via onHover/onPick, and a Confirm button commits the booking.
+ * Hovering a grid cell to the right of the start lights the matching option (hoverUnits).
  */
 export function DurationPopover({
 	courtTitle,
@@ -22,6 +23,7 @@ export function DurationPopover({
 	options,
 	currency,
 	pickedUnits,
+	hoverUnits,
 	onPick,
 	onHover,
 	onConfirm,
@@ -32,6 +34,8 @@ export function DurationPopover({
 	options: DurationOption[];
 	currency: string | undefined;
 	pickedUnits: number | null;
+	/** Duration currently previewed — from hovering an option OR a grid cell; lit like a hover. */
+	hoverUnits: number | null;
 	onPick: (option: DurationOption) => void;
 	onHover: (units: number | null) => void;
 	onConfirm: () => void;
@@ -66,6 +70,7 @@ export function DurationPopover({
 			<ul className="space-y-1.5 px-3 pb-2 pt-2">
 				{options.map((opt) => {
 					const isPicked = opt.units === pickedUnits;
+					const isHovered = !isPicked && opt.units === hoverUnits;
 					return (
 						<li key={opt.units}>
 							<button
@@ -75,7 +80,9 @@ export function DurationPopover({
 								className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 text-left transition-all ${
 									isPicked
 										? 'border-[var(--color-primary)] bg-[var(--color-primary)]/15'
-										: 'border-[var(--color-line-strong)] bg-[var(--color-bg)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10'
+										: isHovered
+											? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+											: 'border-[var(--color-line-strong)] bg-[var(--color-bg)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10'
 								}`}
 							>
 								<span className="heading-display text-sm text-[var(--color-ink)]">{durationLabel(opt.minutes)}</span>
