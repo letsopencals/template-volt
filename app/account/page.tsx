@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { formatPrice } from '@/lib/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { AppointmentListItemResponse, OrderListItemResponse, CollectionMeta, AppointmentStatusType } from '@opencals/storefront-sdk';
+import { onSessionExpired } from '@/lib/session-expired';
 
 type OrderWithId = OrderListItemResponse & { id: string };
 
@@ -23,6 +24,7 @@ export default function AccountDashboard() {
 					fetch('/api/account/appointments?take=5'),
 					fetch('/api/account/orders?take=5'),
 				]);
+				if (apptRes.status === 401 || ordersRes.status === 401) return onSessionExpired();
 
 				if (apptRes.ok) {
 					const data: { data: AppointmentListItemResponse[]; meta: CollectionMeta } = await apptRes.json();

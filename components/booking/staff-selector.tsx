@@ -17,7 +17,7 @@ function getImageUrl(staff: ProductListVariantStaffMember): string | null {
 function getInitials(staff: ProductListVariantStaffMember): string {
 	const first = (staff.firstName?.[0] ?? '').toUpperCase();
 	const last = (staff.lastName?.[0] ?? '').toUpperCase();
-	return `${first}${last}` || (staff.email?.[0]?.toUpperCase() ?? '?');
+	return `${first}${last}` || '?';
 }
 
 export function StaffSelector({ staffMembers, selected, onSelect, hideLabel = false }: StaffSelectorProps) {

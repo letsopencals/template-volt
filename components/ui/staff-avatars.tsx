@@ -16,7 +16,7 @@ const sizeClasses = {
 };
 
 function getInitials(staff: ProductListVariantStaffMember): string {
-	return (staff.firstName?.[0] ?? staff.email?.[0] ?? '?').toUpperCase();
+	return (staff.firstName?.[0] ?? '?').toUpperCase();
 }
 
 function getImageUrl(staff: ProductListVariantStaffMember): string | null {
