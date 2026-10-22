@@ -6,7 +6,6 @@ import Link from 'next/link';
 import type { ProductCollectionProduct, ProductCollectionResponse } from '@opencals/storefront-sdk';
 import { formatDuration, formatPrice } from '@/lib/format';
 import { useSettings } from '@/contexts/settings-context';
-import { siteConfig } from '@/lib/site-config';
 import { useLocation } from '@/contexts/location-context';
 
 export interface TrainingClub {
@@ -248,8 +247,6 @@ export function TrainingCatalog({
 		[allItems, sport, format, level, club, variantClubs],
 	);
 
-	const coachingCopy = siteConfig.coachesSection;
-
 	return (
 		<>
 			{/* Hero */}
@@ -279,10 +276,10 @@ export function TrainingCatalog({
 						transition={{ duration: 0.6, delay: 0.2 }}
 						className="mt-7 max-w-xl text-lg leading-relaxed text-[var(--color-ink-muted)]"
 					>
-						{coachingCopy.body} Individual lessons and small-group classes for padel and squash: pick your
-						club and a session, then book a{' '}
+						Individual lessons and small-group classes for padel and squash, at every level. Pick your club
+						and a session, then choose a coach or{' '}
 						<Link href="/coaches" className="text-[var(--color-primary)] underline underline-offset-4">
-							coach
+							meet them first
 						</Link>
 						.
 					</motion.p>

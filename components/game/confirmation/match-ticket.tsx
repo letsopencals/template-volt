@@ -104,7 +104,7 @@ function Cell({ label, children, wide }: { label: string; children: React.ReactN
 			<dt>
 				<Label className="text-white/45">{label}</Label>
 			</dt>
-			<dd className="heading-display mt-1 truncate text-base capitalize tabular-nums">{children}</dd>
+			<dd className="heading-display mt-1 truncate text-base tabular-nums">{children}</dd>
 		</div>
 	);
 }
