@@ -6,7 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { useNow } from '@/hooks/use-now';
 import { formatPrice } from '@/lib/format';
-import { at, playersOn, STEP_MIN, type BoardRow, type Court, type FreeCourt } from '@/lib/club';
+import { at, formatLabel, playersOn, STEP_MIN, type BoardRow, type Court, type FreeCourt } from '@/lib/club';
 
 /**
  * The hall, from above: every court of the club (for the chosen sport) as a tile, doubles wide and singles narrow,
@@ -65,7 +65,7 @@ export interface HallMapProps {
 	onStart: (min: number) => void;
 	openCourt: string | null;
 	onOpenCourt: (id: string | null) => void;
-	onBook: (court: Court, start: number) => void;
+	onBook: (court: Court, start: number, exact: boolean) => void;
 	nextDay: string | null;
 	onDate: (d: string) => void;
 	onMinutes: (m: number) => void;
@@ -302,7 +302,7 @@ export function HallMap(props: HallMapProps) {
 								</p>
 								<button
 									type="button"
-									onClick={() => onBook(best.court, chosen)}
+									onClick={() => onBook(best.court, chosen, false)}
 									className="inline-flex items-center gap-2 rounded-full bg-[var(--color-primary)] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary-bright)]"
 								>
 									Book {at(chosen, tz, 'HH:mm')} · Court {best.court.number}
@@ -568,7 +568,7 @@ function CourtDrawer({
 	minutes: number;
 	sportLabel: string;
 	currency: string | undefined;
-	onBook: (court: Court, start: number) => void;
+	onBook: (court: Court, start: number, exact: boolean) => void;
 	onClose: () => void;
 }) {
 	const { court, rows } = tile;
@@ -585,7 +585,7 @@ function CourtDrawer({
 						{sportLabel} · Court {court.number}
 					</h3>
 					<p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-						{court.format === 'singles' ? 'Singles court · 2 players' : `Doubles court · ${players} players`}
+						{[formatLabel(court), `${players} players`].filter(Boolean).join(' · ')}
 					</p>
 				</div>
 				<button
@@ -614,7 +614,7 @@ function CourtDrawer({
 								<button
 									key={r.start}
 									type="button"
-									onClick={() => onBook(court, r.start)}
+									onClick={() => onBook(court, r.start, true)}
 									className={clsx(
 										'flex min-w-[84px] flex-col items-start rounded-xl border px-3 py-2 text-left transition-colors',
 										on

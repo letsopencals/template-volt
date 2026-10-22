@@ -68,9 +68,9 @@ export default function OrderDetailPage() {
 					</svg>
 				</Link>
 				<div>
-					<h1 className="font-display text-2xl font-semibold text-[var(--color-ink)]">
+					<h2 className="heading-display text-2xl text-[var(--color-ink)]">
 						Order #{order.name}
-					</h1>
+					</h2>
 					<p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">
 						{formatCustom(order.createdAt, 'dddd, MMMM D, YYYY')}
 					</p>
@@ -91,7 +91,7 @@ export default function OrderDetailPage() {
 				<div className="space-y-6 lg:col-span-2">
 					{/* Appointments */}
 					{appointments.length > 0 && (
-						<div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
+						<div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
 							<h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)]">
 								Appointments
 							</h2>
@@ -133,7 +133,7 @@ export default function OrderDetailPage() {
 
 					{/* Line Items */}
 					{lineItems.length > 0 && (
-						<div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
+						<div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
 							<h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)]">
 								Items
 							</h2>
@@ -184,7 +184,7 @@ export default function OrderDetailPage() {
 
 				{/* Sidebar - Order Summary */}
 				<div className="space-y-6">
-					<div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
+					<div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
 						<h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)]">
 							Order Summary
 						</h2>
@@ -230,7 +230,7 @@ export default function OrderDetailPage() {
 
 					<Link
 						href="/book"
-						className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface)]"
+						className="flex w-full items-center justify-center gap-2 rounded-[24px] border border-[var(--color-line)] bg-[var(--color-surface)] px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface)]"
 					>
 						Book Another Court
 					</Link>
@@ -243,12 +243,12 @@ export default function OrderDetailPage() {
 function PaymentStatusBadge({ status }: { status: OrderDetailResponse['paymentStatus'] }) {
 	const config: Record<string, { bg: string; text: string; label: string }> = {
 		paid: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Paid' },
-		unpaid: { bg: 'bg-amber-100', text: 'text-amber-300', label: 'Unpaid' },
-		'partially-paid': { bg: 'bg-amber-100', text: 'text-amber-300', label: 'Partially Paid' },
+		unpaid: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Unpaid' },
+		'partially-paid': { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Partially Paid' },
 	};
-	const c = config[status] ?? { bg: 'bg-charcoal/10', text: 'text-[var(--color-ink)]', label: status };
+	const c = config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status };
 	return (
-		<span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${c.bg} ${c.text}`}>
+		<span className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${c.bg} ${c.text}`}>
 			{c.label}
 		</span>
 	);
@@ -257,12 +257,12 @@ function PaymentStatusBadge({ status }: { status: OrderDetailResponse['paymentSt
 function FulfillmentStatusBadge({ status }: { status: OrderDetailResponse['fulfillmentStatus'] }) {
 	const config: Record<string, { bg: string; text: string; label: string }> = {
 		fulfilled: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Fulfilled' },
-		unfulfilled: { bg: 'bg-charcoal/10', text: 'text-[var(--color-ink)]', label: 'Unfulfilled' },
-		'partially-fulfilled': { bg: 'bg-amber-100', text: 'text-amber-300', label: 'Partially Fulfilled' },
+		unfulfilled: { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: 'Unfulfilled' },
+		'partially-fulfilled': { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Partially Fulfilled' },
 	};
-	const c = config[status] ?? { bg: 'bg-charcoal/10', text: 'text-[var(--color-ink)]', label: status };
+	const c = config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status };
 	return (
-		<span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${c.bg} ${c.text}`}>
+		<span className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${c.bg} ${c.text}`}>
 			{c.label}
 		</span>
 	);
@@ -271,12 +271,12 @@ function FulfillmentStatusBadge({ status }: { status: OrderDetailResponse['fulfi
 function RefundStatusBadge({ status }: { status: OrderDetailResponse['refundStatus'] }) {
 	const config: Record<string, { bg: string; text: string; label: string }> = {
 		'refund-owed': { bg: 'bg-red-100', text: 'text-red-300', label: 'Refund Owed' },
-		'partially-refunded': { bg: 'bg-amber-100', text: 'text-amber-300', label: 'Partially Refunded' },
+		'partially-refunded': { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Partially Refunded' },
 		'fully-refunded': { bg: 'bg-red-100', text: 'text-red-300', label: 'Fully Refunded' },
 	};
-	const c = config[status] ?? { bg: 'bg-charcoal/10', text: 'text-[var(--color-ink)]', label: status };
+	const c = config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status };
 	return (
-		<span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${c.bg} ${c.text}`}>
+		<span className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${c.bg} ${c.text}`}>
 			{c.label}
 		</span>
 	);
@@ -285,13 +285,13 @@ function RefundStatusBadge({ status }: { status: OrderDetailResponse['refundStat
 function AppointmentStatusBadge({ status }: { status: AppointmentStatusType }) {
 	const config: Record<string, { bg: string; text: string; label: string }> = {
 		scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Scheduled' },
-		completed: { bg: 'bg-charcoal/10', text: 'text-[var(--color-ink)]', label: 'Completed' },
+		completed: { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: 'Completed' },
 		canceled: { bg: 'bg-red-100', text: 'text-red-300', label: 'Canceled' },
-		pending: { bg: 'bg-amber-100', text: 'text-amber-300', label: 'Pending' },
+		pending: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Pending' },
 	};
-	const c = config[status] ?? { bg: 'bg-charcoal/10', text: 'text-[var(--color-ink)]', label: status };
+	const c = config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status };
 	return (
-		<span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${c.bg} ${c.text}`}>
+		<span className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${c.bg} ${c.text}`}>
 			{c.label}
 		</span>
 	);

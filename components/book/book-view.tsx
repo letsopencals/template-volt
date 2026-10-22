@@ -7,7 +7,7 @@ import { useSettings } from '@/contexts/settings-context';
 import { useHomeClub } from '@/hooks/use-home-club';
 import { useClubAvailability } from '@/hooks/use-club-availability';
 import { useClubGrid, type DurationOption } from '@/hooks/use-club-grid';
-import type { CourtSelection } from '@/hooks/use-court-booking';
+import type { GamePick } from '@/hooks/use-game-booking';
 import {
 	at,
 	courtBoard,
@@ -18,8 +18,6 @@ import {
 	nextDays,
 	sportOf,
 	todayIn,
-	toSlot,
-	unitsFor,
 	WINDOW_DAYS,
 	type Catalogue,
 	type Club,
@@ -32,7 +30,7 @@ import { ClubHero } from '@/components/book/club-hero';
 import { HallMap } from '@/components/book/hall-map';
 import { BookToolbar, DayStrip, type BookView as View } from '@/components/book/book-controls';
 import { CourtGrid } from '@/components/booking/court-grid';
-import { CourtCheckout } from '@/components/book/court-checkout';
+import { GameFlow } from '@/components/game/game-flow';
 
 export interface BookParams {
 	club?: string;
@@ -137,7 +135,7 @@ function ClubBooking({
 	});
 	const [view, setView] = useState<View>(params.view === 'grid' ? 'grid' : 'map');
 	const [openCourt, setOpenCourt] = useState<string | null>(null);
-	const [selection, setSelection] = useState<CourtSelection | null>(null);
+	const [selection, setSelection] = useState<GamePick | null>(null);
 
 	const availability = useClubAvailability(club.id, initialAvailability);
 	const clubCourts = useMemo(() => courtsAt(cat, club.id), [cat, club.id]);
@@ -172,19 +170,22 @@ function ClubBooking({
 		window.history.replaceState(window.history.state, '', `/book?${q.toString()}`);
 	}, [club.slug, sport, date, minutes, start, view, tz]);
 
-	const choose = useCallback(
-		(sel: CourtSelection) => {
-			setSelection(sel);
-			window.scrollTo({ top: 0, behavior: 'auto' });
-		},
-		[],
-	);
+	const choose = useCallback((sel: GamePick) => {
+		setSelection(sel);
+		window.scrollTo({ top: 0, behavior: 'auto' });
+	}, []);
+	// "Book 19:30" takes the best court but keeps the others free at that start as fallbacks; a court tapped on the
+	// map or the grid is booked exactly.
 	const bookFromMap = useCallback(
-		(court: Court, s: number) => choose({ court, slot: toSlot(court, s, minutes), units: unitsFor(court, minutes), locationId: club.id }),
-		[choose, minutes, club.id],
+		(court: Court, s: number, exact: boolean) => {
+			const row = rows.find((r) => r.start === s);
+			choose({ kind: 'court', clubId: club.id, courtId: court.id, start: s, minutes, alternatives: exact ? [] : (row?.courts.map((c) => c.court.id) ?? []), exactCourt: exact });
+		},
+		[choose, rows, club.id, minutes],
 	);
 	const bookFromGrid = useCallback(
-		(court: Court, option: DurationOption) => choose({ court, slot: option.slot, units: option.units, locationId: club.id }),
+		(court: Court, option: DurationOption) =>
+			choose({ kind: 'court', clubId: club.id, courtId: court.id, start: toSlotStart(option), minutes: option.minutes, alternatives: [], exactCourt: true }),
 		[choose, club.id],
 	);
 	const back = useCallback(() => {
@@ -192,7 +193,7 @@ function ClubBooking({
 		void availability.refresh();
 	}, [availability]);
 
-	if (selection) return <CourtCheckout selection={selection} club={club} currency={currency} onBack={back} />;
+	if (selection) return <GameFlow cat={cat} pick={selection} backLabel={`Back to ${club.name}`} onBack={back} />;
 
 	const sportInfo = sportOf(sport);
 
@@ -274,6 +275,10 @@ function ClubBooking({
 			</div>
 		</div>
 	);
+}
+
+function toSlotStart(option: DurationOption): number {
+	return moment.utc(`${option.slot.fromDate} ${option.slot.fromTime}`, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD HH:mm']).valueOf() / 60000;
 }
 
 function localDayOf(min: number, tz: string): string {

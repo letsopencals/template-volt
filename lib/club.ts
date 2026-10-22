@@ -281,8 +281,14 @@ export function priceFor(court: Court, minutes: number): number {
 	return court.price * unitsFor(court, minutes);
 }
 
-export function playersOn(court: Court): number {
-	return court.format === 'singles' ? 2 : 4;
+export function playersOn(court: Pick<Court, 'format' | 'sport'>): number {
+	return sportOf(court.sport).fixedPlayers ?? (court.format === 'singles' ? 2 : 4);
+}
+
+/** "Doubles" / "Singles" where the sport has both (padel), else null (squash). */
+export function formatLabel(court: Pick<Court, 'format' | 'sport'>): string | null {
+	if (sportOf(court.sport).fixedPlayers != null) return null;
+	return court.format === 'singles' ? 'Singles' : 'Doubles';
 }
 
 // ── Starts and the board ─────────────────────────────────────────────────

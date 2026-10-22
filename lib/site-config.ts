@@ -39,6 +39,8 @@ export const siteConfig = {
 			tagline: 'Glass-walled panoramic courts',
 			blurb: 'Panoramic glass-walled doubles courts with LED lighting, plus singles courts for 1-on-1 games. Grab three friends and play.',
 			priceHint: 'from €15 / 30 min',
+			/** Players per court when it doesn't depend on the court (null: 4 on doubles, 2 on "· Singles" courts) */
+			fixedPlayers: null as number | null,
 			image: 'sports/padel.jpg',
 			accent: '#FF4A1C',
 		},
@@ -50,6 +52,7 @@ export const siteConfig = {
 			tagline: 'Championship glass-back courts',
 			blurb: 'Climate-controlled championship squash courts with sprung floors and glass-back viewing, in Madrid and Valencia.',
 			priceHint: 'from €12 / 30 min',
+			fixedPlayers: 2 as number | null,
 			image: 'sports/squash.jpg',
 			accent: '#5B93A8',
 		},

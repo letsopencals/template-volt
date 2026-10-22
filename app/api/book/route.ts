@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
 	try {
 		const body = await request.json();
-		const { slot, numberOfAttendees, addOns, customer, checkoutQuestionAnswers } = body as {
+		const { slot, numberOfAttendees, addOns, customer, checkoutQuestionAnswers, guests, customAttributes } = body as {
 			slot: {
 				productId: string;
 				fromDate: string;
@@ -43,6 +43,10 @@ export async function POST(request: NextRequest) {
 			addOns?: AddOnSelection[];
 			customer?: CustomerInput;
 			checkoutQuestionAnswers?: QuestionAnswerInput[];
+			/** Crew emails: invited as guests (they get the booking emails; capacity is unaffected) */
+			guests?: { email: string }[];
+			/** Free-form notes on the booking, e.g. `crew: "Sam, Alex"` */
+			customAttributes?: Record<string, string>;
 		};
 
 		if (!slot?.productId || !slot?.fromDate || !slot?.fromTime || !slot?.toDate || !slot?.toTime) {
@@ -87,6 +91,8 @@ export async function POST(request: NextRequest) {
 				...(checkoutQuestionAnswers && checkoutQuestionAnswers.length > 0
 					? { checkoutQuestionAnswers }
 					: {}),
+				...(guests && guests.length > 0 ? { guests: guests.filter((g) => g?.email).slice(0, 3) } : {}),
+				...(customAttributes && Object.keys(customAttributes).length > 0 ? { customAttributes } : {}),
 			},
 			headers: authHeaders,
 			throwOnError: true,

@@ -5,33 +5,36 @@ import { type Appearance, type StripeError, loadStripe } from '@stripe/stripe-js
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 
-const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
+const envPublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
 interface StripePaymentProps {
 	clientSecret: string;
 	stripeAccountId?: string | null;
+	/** The key the API returns with checkout (matches the store's test/live mode); falls back to the env key */
+	publishableKey?: string | null;
 	onSuccess: (paymentIntentId: string) => void;
 	onError: (message: string) => void;
 	disabled?: boolean;
 }
 
-export function StripePayment({ clientSecret, stripeAccountId, onSuccess, onError, disabled }: StripePaymentProps) {
+export function StripePayment({ clientSecret, stripeAccountId, publishableKey: fromApi, onSuccess, onError, disabled }: StripePaymentProps) {
+	const publishableKey = fromApi || envPublishableKey;
 	const stripePromise = useMemo(() => {
 		if (!publishableKey) return null;
 		return loadStripe(publishableKey, {
 			stripeAccount: stripeAccountId ?? undefined,
 		});
-	}, [stripeAccountId]);
+	}, [stripeAccountId, publishableKey]);
 
 	const appearance = useMemo(
 		(): Appearance => ({
 			theme: 'night',
 			variables: {
-				colorPrimary: '#c08552',
-				colorBackground: '#1a1815',
-				colorText: '#efe6d8',
-				colorDanger: '#dc2626',
-				fontFamily: 'system-ui, -apple-system, sans-serif',
+				colorPrimary: '#FF4A1C',
+				colorBackground: '#141414',
+				colorText: '#FAFAFA',
+				colorDanger: '#ef4444',
+				fontFamily: 'Space Grotesk, system-ui, -apple-system, sans-serif',
 				spacingUnit: '4px',
 				borderRadius: '8px',
 			},

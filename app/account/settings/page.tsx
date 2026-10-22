@@ -77,12 +77,12 @@ export default function SettingsPage() {
 
 	return (
 		<div>
-			<h1 className="font-display text-3xl font-semibold text-[var(--color-ink)]">Settings</h1>
+			<h2 className="heading-display text-3xl text-[var(--color-ink)]">My details</h2>
 			<p className="mt-2 text-sm text-[var(--color-ink-muted)]">Manage your profile and security</p>
 
 			<div className="mt-8 space-y-8">
 				{/* Profile Section */}
-				<div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
+				<div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
 					<h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)]">Profile</h2>
 
 					{profileLoading ? (
@@ -153,7 +153,7 @@ export default function SettingsPage() {
 				</div>
 
 				{/* Password Section */}
-				<div className="rounded-2xl border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
+				<div className="rounded-[24px] border border-[var(--color-line)] bg-[var(--color-surface)] p-6">
 					<h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-ink)]">Change Password</h2>
 
 					<Form {...passwordForm}>
