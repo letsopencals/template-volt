@@ -98,21 +98,24 @@ composes the smaller ones (`hooks/use-booking-flow.ts`).
 This template ships **two distinct booking flows** over one store, because the club
 sells two different kinds of thing:
 
-**1. Court rentals — the court grid (`/book`).** Each court is its own product with
-no staff and `maxAttendees: 1` (the Opencals *Self* conflict rule → each court is an
-independent resource; booking any duration on a court blocks only that court). Courts
-also have `allowCustomDuration` (30-min base, up to 2h), so a booking is a positive
-multiple of the base and the backend prices it `ceil(bookedMs/baseMs) × price`.
-- Data: `app/api/courts/[collection]/grid/route.ts` fans out one
-  `getCurrentAvailabilities` call **per court** (parallel) for the selected date and
-  returns base slots keyed by court. `hooks/use-court-grid.ts` composes them into a
-  time axis + computes duration options from *consecutive* free base slots.
-- UI: `components/booking/court-grid.tsx` (rows = courts, cols = time) →
-  `duration-popover.tsx` → `hooks/use-court-booking.ts` runs a no-staff flow
-  (extras → questions → details → payment). Orchestrated by
-  `components/booking/court-booking-view.tsx` (sport toggle + `day-stepper.tsx`).
-  There is **no `staffMemberId`** anywhere in this flow — the court product is the
-  resource.
+**1. Court rentals — club-first `/book` (Hall map | Grid).** Clubs are store locations;
+each court is one product variant in a court collection (`siteConfig.sports[].courtsCollection`),
+assigned to one club, with no staff, `maxAttendees: 1` (the *Self* conflict rule → an independent
+resource) and `allowCustomDuration` (30-min base, up to 2h; priced `ceil(bookedMs/baseMs) × price`).
+`Court N · Singles` in the variant title = singles court.
+- Data: `lib/server-data.ts#getCatalogue` builds clubs + courts (`lib/club.ts#buildCatalogue`,
+  cached 5 min). `app/api/clubs/[locationId]/availability` → `lib/availability-server.ts` reads
+  each court's **merged ranges for the whole horizon once** (`getCurrentAvailabilitiesMerged`, no
+  date), caches each court 60 s (`unstable_cache`, tags `court:<id>` / `availability`), and returns
+  packed `[startMin, lengthMin]` spans. `/api/book`, cancel, reschedule and cart-item removal call
+  `revalidateTag`. **Never fetch availability per day or per cell from the client**: the hall map,
+  grid, pulse, day strip and "free from" are all computed in `lib/club.ts` from those spans.
+- UI: `components/book/book-view.tsx` (club from `?club=` / remembered `@opencals/location` /
+  "Near me" via `hooks/use-home-club.ts`; URL state via `replaceState`) → `club-chooser`,
+  `club-hero`, `book-controls`, `hall-map` or `components/booking/court-grid.tsx`
+  (+ `hooks/use-club-grid.ts`, `duration-popover`) → `components/book/court-checkout.tsx` +
+  `hooks/use-court-booking.ts` (extras → questions → details → payment). There is **no
+  `staffMemberId`** anywhere in this flow — the court product is the resource.
 
 **2. Coached training — the classic flow (`/training` → `/booking/[slug]`).** Training
 products are assigned to real coach staff (*Staff* conflict rule) and may have group
@@ -122,8 +125,8 @@ extras → questions → details → payment), with `staff-selector.tsx` repurpo
 coach selector and `time-slots.tsx` surfacing "X spots left" from the slot's
 `attendees`/`maxAttendees`.
 
-When touching booking code, know which surface a file belongs to: `court-*` /
-`use-court-*` / `day-stepper` / `duration-popover` are court-only; `booking-view` /
+When touching booking code, know which surface a file belongs to: `components/book/*`,
+`court-grid`, `duration-popover`, `use-club-*`, `use-court-booking`, `use-home-club` are court-only; `booking-view` /
 `use-booking-flow` / `staff-selector` are training-only; `addons-selector`,
 `questions-form`, `details-step`, `payment-step` are **shared** by both.
 
@@ -131,7 +134,8 @@ When touching booking code, know which surface a file belongs to: `court-*` /
 
 - `npm run build` must pass. In the route summary, read-only pages should be `○`
   (static) or `ƒ` (dynamic) Server Components — not shipped as pure client pages.
-- Smoke test: the court grid (`/book`) paints per-court availability and a cell click
-  opens the duration popover → books that court; the training catalog (`/training`)
+- Smoke test: `/book` shows the club chooser on a fresh browser, then the club's hall map
+  (one `/api/clubs/<id>/availability` request); the time bar re-lights courts; "Book HH:MM" and a
+  grid cell → duration popover both reach the court checkout; the training catalog (`/training`)
   filters by sport/format and the flow (`/booking/[slug]`) books a coached session
   with a chosen coach and shows group spots-left.

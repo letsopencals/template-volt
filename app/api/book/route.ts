@@ -2,6 +2,7 @@ import '@/lib/opencals';
 import { AppointmentService, CartService } from '@opencals/storefront-sdk';
 import { getAccessToken } from '@/lib/api-auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { handleApiError } from '@/lib/api-error-handler';
 
 interface AddOnSelection {
@@ -90,6 +91,9 @@ export async function POST(request: NextRequest) {
 			headers: authHeaders,
 			throwOnError: true,
 		});
+
+		// The court is held now: drop its cached availability so the hall and grid show it taken at once.
+		revalidateTag(`court:${slot.productId}`);
 
 		const { data: finalCart } = await CartService.get({
 			headers: { ...authHeaders, 'X-Cart-Id': cart.id },

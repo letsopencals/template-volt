@@ -1,13 +1,18 @@
 import '@/lib/opencals';
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import {
 	StoreService,
 	ProductService,
 	ProductCollectionService,
+	LocationService,
+	StaffMemberService,
 	type StorePublicSettings,
 	type ProductListItemResponse,
 	type ProductCollectionResponse,
+	type StaffMemberListItemResponse,
 } from '@opencals/storefront-sdk';
+import { buildCatalogue, type Catalogue } from '@/lib/club';
 
 /**
  * Server-only data readers. Each is wrapped in React.cache() so repeated calls
@@ -74,3 +79,72 @@ export const getProduct = cache(
 		}
 	},
 );
+
+/** Every product group, all pages (the court catalogue spans every club). */
+async function listAllProducts(): Promise<ProductListItemResponse[]> {
+	const out: ProductListItemResponse[] = [];
+	for (let page = 1; page <= 10; page++) {
+		const { data } = await ProductService.list({ query: { take: 100, page }, throwOnError: true });
+		out.push(...(data?.data ?? []));
+		if (!data?.meta?.hasNextPage) break;
+	}
+	return out;
+}
+
+/**
+ * The club network: locations + courts, shaped for the booking UI. Cached across requests for five minutes (courts
+ * and clubs change rarely; availability is cached separately and much shorter). On an API error nothing is cached
+ * and an empty catalogue renders, so a hiccup never sticks.
+ */
+const loadCatalogue = unstable_cache(
+	async (): Promise<Catalogue> => {
+		const [products, locations, settings] = await Promise.all([
+			listAllProducts(),
+			LocationService.list({ query: { take: 100 }, throwOnError: true }).then((r) => r.data?.data ?? []),
+			StoreService.getStorePublicSettings().then((r) => r.data ?? null),
+		]);
+		return buildCatalogue(products, locations, settings?.settings?.timezone ?? 'UTC');
+	},
+	['volt-catalogue-v1'],
+	{ revalidate: 300, tags: ['catalogue'] },
+);
+
+export const getCatalogue = cache(async (): Promise<Catalogue> => {
+	try {
+		return await loadCatalogue();
+	} catch {
+		return { clubs: [], courts: [] };
+	}
+});
+
+/** Coaches (staff) with the clubs they work at. */
+export const getStaff = cache(async (): Promise<StaffMemberListItemResponse[]> => {
+	try {
+		const { data } = await StaffMemberService.list({ query: { take: 100 } });
+		return data?.data ?? [];
+	} catch {
+		return [];
+	}
+});
+
+/**
+ * Which clubs each product variant is offered at (variant id → location ids), for filtering training by club.
+ * Only this small map is cached (five minutes), never the full product list.
+ */
+const loadVariantClubs = unstable_cache(
+	async (): Promise<Record<string, string[]>> => {
+		const out: Record<string, string[]> = {};
+		for (const g of await listAllProducts()) for (const v of g.variants ?? []) out[v.id] = (v.locations ?? []).map((l) => l.id);
+		return out;
+	},
+	['volt-variant-clubs-v1'],
+	{ revalidate: 300, tags: ['catalogue'] },
+);
+
+export const getVariantClubs = cache(async (): Promise<Record<string, string[]>> => {
+	try {
+		return await loadVariantClubs();
+	} catch {
+		return {};
+	}
+});

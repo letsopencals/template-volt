@@ -1,7 +1,7 @@
 'use client';
 
 import { formatPrice } from '@/lib/format';
-import type { DurationOption } from '@/hooks/use-court-grid';
+import type { DurationOption } from '@/hooks/use-club-grid';
 
 function durationLabel(minutes: number): string {
 	const h = Math.floor(minutes / 60);

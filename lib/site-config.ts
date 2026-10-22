@@ -11,7 +11,7 @@ export const siteConfig = {
 	name: 'VOLT Padel & Squash Club',
 	tagline: 'Book a Court in Seconds',
 	description:
-		'VOLT Padel & Squash Club — 11 panoramic padel courts and 6 championship squash courts in Madrid, plus coaching for every level. Book your court or a lesson online in seconds.',
+		'VOLT Padel & Squash — four clubs in Madrid, Barcelona, Valencia and Málaga, with panoramic padel courts, championship squash and coaching for every level. Book a court or a lesson online in seconds.',
 	url: 'https://example.com',
 
 	/** Logo rendered as: {text}{accent} */
@@ -25,16 +25,19 @@ export const siteConfig = {
 		squashTraining: 'squash-training',
 	},
 
-	/** The two sports — power the sport toggle on the grid and the home sport cards. */
+	/**
+	 * Sports. Each maps a court collection (and a training collection) in the store to a label and colour, so a new
+	 * sport (pickleball, tennis…) is one entry here plus its collections in the dashboard. A club only shows the
+	 * sports it has courts for.
+	 */
 	sports: [
 		{
 			key: 'padel' as const,
 			label: 'Padel',
 			courtsCollection: 'padel-courts',
 			trainingCollection: 'padel-training',
-			courtCount: 11,
 			tagline: 'Glass-walled panoramic courts',
-			blurb: 'Eleven panoramic padel courts with pro glass walls and LED lighting. Grab three friends and play.',
+			blurb: 'Panoramic glass-walled doubles courts with LED lighting, plus singles courts for 1-on-1 games. Grab three friends and play.',
 			priceHint: 'from €15 / 30 min',
 			image: 'sports/padel.jpg',
 			accent: '#FF4A1C',
@@ -44,29 +47,46 @@ export const siteConfig = {
 			label: 'Squash',
 			courtsCollection: 'squash-courts',
 			trainingCollection: 'squash-training',
-			courtCount: 6,
 			tagline: 'Championship glass-back courts',
-			blurb: 'Six climate-controlled championship squash courts with sprung floors and glass-back viewing.',
+			blurb: 'Climate-controlled championship squash courts with sprung floors and glass-back viewing, in Madrid and Valencia.',
 			priceHint: 'from €12 / 30 min',
 			image: 'sports/squash.jpg',
 			accent: '#5B93A8',
 		},
 	],
 
+	/**
+	 * Club presentation (photos, a line of copy, hours, phone). The clubs themselves are the store's locations; an
+	 * entry here is matched to a location by slug, city or title (case- and accent-insensitive). Locations without
+	 * an entry get a photo from `fallbackImages`.
+	 */
+	clubs: {
+		eyebrow: 'Four clubs · One account',
+		heading: 'Play wherever\nyou are.',
+		body: 'Four VOLT clubs across Spain. Book any court in any club with one account. Your club is remembered, so next time you land straight on its hall.',
+		presentation: [
+			{ match: ['madrid'], image: 'gallery/look-1.jpg', tagline: 'The flagship. Padel and squash under one roof.', hours: 'Daily 07:00–23:00', phone: '+34 910 555 042' },
+			{ match: ['barcelona'], image: 'gallery/look-3.jpg', tagline: 'Eight padel courts, two of them singles.', hours: 'Daily 08:00–23:30', phone: '+34 930 555 017' },
+			{ match: ['valencia'], image: 'about/club.jpg', tagline: 'Padel and squash by the Turia gardens.', hours: 'Daily 07:00–23:00', phone: '+34 960 555 230' },
+			{ match: ['malaga'], image: 'gallery/look-6.jpg', tagline: 'Padel with sea air, open late.', hours: 'Daily 08:00–23:30', phone: '+34 950 555 088' },
+		],
+		fallbackImages: ['gallery/look-1.jpg', 'gallery/look-3.jpg', 'about/club.jpg', 'gallery/look-6.jpg', 'gallery/look-5.jpg'],
+	},
+
 	/** Hero section on the homepage */
 	hero: {
-		eyebrow: 'Madrid · Padel & Squash',
+		eyebrow: 'Madrid · Barcelona · Valencia · Málaga',
 		heading: ['OWN', 'THE'],
 		headingAccent: 'COURT',
-		body: 'Seventeen pro courts. Real coaching for every level. Book online in seconds — no phone calls, no third-party apps, no queue.',
+		body: 'Four clubs, one account. See every court in your club live, pick a time and play. No phone calls, no third-party apps, no queue.',
 		primaryCta: { label: 'Book a Court', href: '/book' },
 		secondaryCta: { label: 'Train with a Coach', href: '/training' },
-		availabilityChip: { label: 'Next free court', value: 'Today · 18:30' },
+		availabilityChip: { label: 'Live court map', value: 'See every court in your club' },
 		backgroundText: 'VOLT',
 		/** Big stat overlaid on the hero */
 		stats: [
-			{ value: '17', label: 'Pro courts' },
-			{ value: '16h', label: 'Open daily' },
+			{ value: '4', label: 'Clubs' },
+			{ value: '27', label: 'Courts' },
 			{ value: '4', label: 'Coaches' },
 		],
 	},
@@ -74,15 +94,15 @@ export const siteConfig = {
 	/** "Two ways to play" band — the two booking modes. */
 	modes: {
 		eyebrow: 'Two ways to play',
-		heading: 'Court rentals &\ncoaching, one club.',
+		heading: 'Court rentals &\ncoaching, every club.',
 		body: 'Book a court by the half-hour and just play, or level up with a certified coach — individually or in a small group.',
 		cards: [
 			{
 				key: 'courts',
 				kicker: '01 / RENT',
 				title: 'Book a Court',
-				body: 'Pick a sport, a court and a time on a single grid. Rent by the half-hour, up to two hours. Rackets and balls available on the spot.',
-				cta: { label: 'Open the court grid', href: '/book' },
+				body: 'Open your club’s hall live: every court from above, free ones lit. Pick a time, or switch to the grid. Up to two hours, rackets and balls on the spot.',
+				cta: { label: 'See the courts', href: '/book' },
 			},
 			{
 				key: 'training',
@@ -110,10 +130,10 @@ export const siteConfig = {
 	/** Stats band on the homepage */
 	statsBand: {
 		stats: [
-			{ value: '17', label: 'Courts' },
+			{ value: '4', label: 'Clubs' },
+			{ value: '27', label: 'Courts' },
 			{ value: '4', label: 'Coaches' },
-			{ value: '2', label: 'Sports' },
-			{ value: '07–23', label: 'Open daily' },
+			{ value: '07–23:30', label: 'Open daily' },
 		],
 	},
 
@@ -121,7 +141,7 @@ export const siteConfig = {
 	coachesSection: {
 		eyebrow: 'The Bench',
 		heading: 'Coaches who\nplay to win.',
-		body: 'Four certified coaches, one obsession: making your game better. Some coach both sports — book any of them from the training flow.',
+		body: 'Certified coaches in every club, one obsession: making your game better. Pick your club to see who coaches there, then book them from the training flow.',
 	},
 
 	coaches: [
@@ -170,9 +190,9 @@ export const siteConfig = {
 		headingAccent: 'four taps.',
 		body: 'From choosing a sport to stepping on court — the whole thing takes under a minute, all online.',
 		steps: [
-			{ number: '01', title: 'Pick your sport', body: 'Padel or squash — flip the toggle on the booking grid.' },
-			{ number: '02', title: 'Choose a court & time', body: 'See every court and every open slot on one grid.' },
-			{ number: '03', title: 'Set your duration', body: '30, 60, 90 minutes or a full two hours — you decide.' },
+			{ number: '01', title: 'Pick your club', body: 'Near me, or the one you played last time. We remember it.' },
+			{ number: '02', title: 'Choose a time', body: 'Drag the time bar and watch the hall light up with free courts.' },
+			{ number: '03', title: 'Take a court', body: 'Book the best free court in one tap, or pick an exact court on the map or grid.' },
 			{ number: '04', title: 'Play', body: 'Add rackets or balls, pay, and just turn up ready to go.' },
 		],
 	},
@@ -196,7 +216,7 @@ export const siteConfig = {
 	bookingBanner: {
 		heading: ['READY TO'],
 		headingAccent: 'PLAY?',
-		body: 'Book a court now — open every day, 7am to 11pm.',
+		body: 'Book a court now. Four clubs, open every day until late.',
 		cta: { label: 'Book a Court', href: '/book' },
 	},
 
@@ -206,20 +226,20 @@ export const siteConfig = {
 		heroHeading: ['BUILT FOR', 'PEOPLE WHO'],
 		heroHeadingAccent: 'LOVE THE GAME',
 		heroBody:
-			'A modern padel and squash club in the heart of Madrid — pro courts, real coaching, and booking that actually works.',
+			'A network of modern padel and squash clubs across Spain: pro courts, real coaching, and booking that actually works.',
 		storyParagraphs: [
-			'VOLT opened with one goal: make it effortless to play the sports we love. No hunting for a court on a clunky third-party app, no phone tag with the front desk — just seventeen pro courts and a booking grid that shows you exactly what is free, right now.',
-			'Eleven panoramic padel courts and six championship squash courts sit under one roof, open sixteen hours a day. Whatever your level, whenever you are free, there is a court and a coach waiting.',
-			'Our four certified coaches run everything from first-timer intros to advanced match play, for both sports. Because a great club is not just walls and floors — it is the people who help you get better.',
+			'VOLT opened in Madrid with one goal: make it effortless to play the sports we love. No hunting for a court on a clunky third-party app, no phone tag with the front desk. Just pro courts and a booking page that shows you exactly what is free, right now.',
+			'Today there are four clubs, in Madrid, Barcelona, Valencia and Málaga. Panoramic doubles courts, singles courts for 1-on-1 games, and championship squash in Madrid and Valencia. One account books them all.',
+			'Every club has its own coaches, running everything from first-timer intros to advanced match play. Because a great club is not just walls and floors. It is the people who help you get better.',
 		],
 		bottomCta: 'YOUR COURT IS WAITING',
-		bottomCtaBody: 'Book a court or a lesson and find out why Madrid plays at VOLT.',
+		bottomCtaBody: 'Book a court or a lesson at the club nearest you.',
 	},
 
 	/** Footer */
 	footer: {
 		description:
-			'Padel & squash in Madrid. Seventeen pro courts, four coaches, and booking that takes seconds. Open every day, 7am–11pm.',
+			'Padel & squash in Madrid, Barcelona, Valencia and Málaga. One account for every club, and booking that takes seconds.',
 		socials: ['Instagram', 'TikTok', 'Strava'],
 		playLinks: [
 			{ label: 'Book Padel', href: '/book?sport=padel' },
@@ -236,19 +256,19 @@ export const siteConfig = {
 		],
 	},
 
-	/** Contact page */
+	/** Contact page (head office; each club's own address and phone come from the clubs list) */
 	contact: {
 		address: 'Calle del Saque 12\nMadrid, 28045',
 		phone: '+34 910 555 042',
 		email: 'play@voltpadel.club',
-		hours: 'Mon — Sun: 7:00 — 23:00',
+		hours: 'Clubs open daily from 07:00',
 	},
 
 	/** Testimonials (homepage) */
 	testimonials: [
 		{
 			quote:
-				'Booked a padel court from my phone in about twenty seconds. The grid shows every court at once — no more guessing what is free. This is how it should work.',
+				'Booked a padel court from my phone in about twenty seconds. The hall map shows every court at once, so no more guessing what is free. This is how it should work.',
 			author: 'Alex Moreno',
 			role: 'Padel · twice a week',
 		},
@@ -270,15 +290,19 @@ export const siteConfig = {
 	faqs: [
 		{
 			q: 'How do I book a court?',
-			a: 'Open the booking grid, pick padel or squash, choose a court and a time, and set your duration — 30 minutes up to two hours. The whole thing takes under a minute, no phone call needed.',
+			a: 'Pick your club, a day and how long you want to play. The hall map lights up every free court; tap "Book" for the best one or choose a specific court. Prefer a timetable? Switch to the grid. No phone call needed.',
 		},
 		{
 			q: 'How long can I book a court for?',
-			a: 'Courts book by the half-hour, from 30 minutes up to a full two hours. Pick the duration that suits your session — the grid only shows slots with enough consecutive free time.',
+			a: 'Courts book in half-hour steps, up to two hours. Pick 60, 90 or 120 minutes on the hall map, or any length on the grid. We only show starts with enough free time on the court.',
 		},
 		{
 			q: 'Can I rent rackets and balls?',
 			a: 'Yes. Add premium padel or squash rackets, a fresh set of match balls, towel service, or premium floodlighting as extras when you book — no need to bring your own gear.',
+		},
+		{
+			q: 'Can I play at more than one club?',
+			a: 'Yes. One account works at all four clubs. We remember the club you last booked, and you can switch club at any time from the booking page.',
 		},
 		{
 			q: 'Do I need to be a member?',

@@ -137,6 +137,9 @@ function ThankYouContent() {
 													<div className="flex items-start justify-between gap-3">
 														<p className="text-base font-semibold text-[var(--color-ink)]">
 															{appt.product?.title ?? 'Service'}
+															{appt.product?.variantTitle && appt.product.variantTitle !== appt.product.title ? (
+																<span className="text-[var(--color-ink-muted)]"> · {appt.product.variantTitle}</span>
+															) : null}
 														</p>
 														<AppointmentStatusBadge status={appt.status} />
 													</div>
@@ -150,7 +153,11 @@ function ThankYouContent() {
 														)}
 														<InfoRow
 															icon={isOnline ? 'video' : 'pin'}
-															text={isOnline ? 'Online session — video or phone' : (appt.location?.title ?? 'At the club')}
+															text={
+																isOnline
+																	? 'Online session — video or phone'
+																	: [appt.location?.title, appt.location?.displayAddress ?? appt.location?.address].filter(Boolean).join(' · ') || 'At the club'
+															}
 														/>
 														{appt.staffMember && (
 															<InfoRow
@@ -263,10 +270,10 @@ function ThankYouContent() {
 									</div>
 								)}
 								<Link
-									href="/book"
+									href={appointments[0]?.location?.slug ? `/book?club=${appointments[0].location.slug}` : '/book'}
 									className="flex w-full items-center justify-center gap-2 rounded-full border border-[var(--color-line-strong)] px-6 py-3.5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-primary)]/40"
 								>
-									Book another court
+									Book another court{appointments[0]?.location?.title ? ` at ${appointments[0].location.title}` : ''}
 								</Link>
 							</div>
 						</div>

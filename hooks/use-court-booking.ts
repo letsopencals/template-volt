@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import type { CheckoutStartResponse, CurrentAvailabilitySlot } from '@opencals/storefront-sdk';
-import type { CourtGridCourt } from '@/app/api/courts/[collection]/route';
+import type { Court } from '@/lib/club';
 import type { CourtStep } from '@/lib/booking-constants';
 import { useCart } from '@/contexts/cart-context';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
@@ -13,7 +13,7 @@ import { useCheckoutQuestions } from '@/hooks/use-checkout-questions';
 import { usePaymentProviders } from '@/hooks/use-payment-providers';
 
 export interface CourtSelection {
-	court: CourtGridCourt;
+	court: Court;
 	slot: CurrentAvailabilitySlot;
 	units: number;
 	locationId: string | null;

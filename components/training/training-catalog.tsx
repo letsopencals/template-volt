@@ -1,12 +1,18 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import type { ProductCollectionProduct, ProductCollectionResponse } from '@opencals/storefront-sdk';
 import { formatDuration, formatPrice } from '@/lib/format';
 import { useSettings } from '@/contexts/settings-context';
 import { siteConfig } from '@/lib/site-config';
+import { useLocation } from '@/contexts/location-context';
+
+export interface TrainingClub {
+	id: string;
+	name: string;
+}
 
 export type Sport = 'padel' | 'squash';
 
@@ -190,11 +196,34 @@ function TrainingCard({ item, index }: { item: TrainingItem; index: number }) {
 export function TrainingCatalog({
 	groups,
 	initialSport = 'all',
+	clubs,
+	variantClubs,
+	initialClub,
 }: {
 	groups: TrainingSportGroup[];
 	initialSport?: SportFilter;
+	/** Clubs (store locations) that run training */
+	clubs: TrainingClub[];
+	/** Variant id → the clubs it runs at */
+	variantClubs: Record<string, string[]>;
+	/** Club id from ?club= */
+	initialClub: string | null;
 }) {
+	const { selectedLocationId, setSelectedLocationId } = useLocation();
+	const [club, setClubState] = useState<string>(initialClub ?? 'all');
 	const [sport, setSport] = useState<SportFilter>(initialSport);
+
+	// No club in the link: start from the club this browser remembers (the one /book and the booking flow use).
+	useEffect(() => {
+		if (!initialClub && selectedLocationId && clubs.some((c) => c.id === selectedLocationId)) setClubState(selectedLocationId);
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- once the remembered club is known
+	}, [selectedLocationId]);
+
+	const setClub = (id: string) => {
+		setClubState(id);
+		if (id !== 'all') setSelectedLocationId(id);
+	};
+	const clubOptions = useMemo(() => [{ key: 'all', label: 'All clubs' }, ...clubs.map((c) => ({ key: c.id, label: c.name }))], [clubs]);
 	const [format, setFormat] = useState<FormatFilter>('all');
 	const [level, setLevel] = useState<string>('all');
 
@@ -208,13 +237,15 @@ export function TrainingCatalog({
 	const filtered = useMemo(
 		() =>
 			allItems.filter((it) => {
+				const at = variantClubs[it.product.id];
+				if (club !== 'all' && at && !at.includes(club)) return false;
 				if (sport !== 'all' && it.sport !== sport) return false;
 				if (format === 'individual' && it.isGroup) return false;
 				if (format === 'group' && !it.isGroup) return false;
 				if (level !== 'all' && it.level !== level) return false;
 				return true;
 			}),
-		[allItems, sport, format, level],
+		[allItems, sport, format, level, club, variantClubs],
 	);
 
 	const coachingCopy = siteConfig.coachesSection;
@@ -248,8 +279,8 @@ export function TrainingCatalog({
 						transition={{ duration: 0.6, delay: 0.2 }}
 						className="mt-7 max-w-xl text-lg leading-relaxed text-[var(--color-ink-muted)]"
 					>
-						{coachingCopy.body} Individual lessons and small-group classes for padel and squash — pick a
-						session and book a{' '}
+						{coachingCopy.body} Individual lessons and small-group classes for padel and squash: pick your
+						club and a session, then book a{' '}
 						<Link href="/coaches" className="text-[var(--color-primary)] underline underline-offset-4">
 							coach
 						</Link>
@@ -262,6 +293,11 @@ export function TrainingCatalog({
 			<section className="bg-[var(--color-bg)] pb-24 lg:pb-32">
 				<div className="mx-auto max-w-[1400px] px-6 lg:px-10">
 					{/* Filters */}
+					{clubs.length > 1 ? (
+						<div className="mb-4">
+							<Toggle options={clubOptions} value={club} onChange={setClub} />
+						</div>
+					) : null}
 					<div className="flex flex-col gap-4 border-y border-[var(--color-line)] py-5 lg:flex-row lg:items-center lg:justify-between">
 						<Toggle options={SPORT_FILTERS} value={sport} onChange={setSport} />
 						<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -275,7 +311,7 @@ export function TrainingCatalog({
 					{filtered.length === 0 ? (
 						<div className="py-24 text-center">
 							<p className="text-[var(--color-ink-muted)]">
-								No sessions match these filters. Try widening your selection.
+								No sessions match these filters{club !== 'all' ? ' at this club' : ''}. Try widening your selection.
 							</p>
 						</div>
 					) : (

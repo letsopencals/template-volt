@@ -2,6 +2,7 @@ import '@/lib/opencals';
 import { AppointmentService } from '@opencals/storefront-sdk';
 import { requireAuth } from '@/lib/api-auth';
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { handleApiError } from '@/lib/api-error-handler';
 
 export async function PUT(
@@ -22,6 +23,8 @@ export async function PUT(
 			},
 			headers: auth.headers,
 		});
+		// A freed (or moved) court: re-read court availability on the next request.
+		revalidateTag('availability');
 		return NextResponse.json(data);
 	} catch (err) {
 		return handleApiError(err);

@@ -6,7 +6,7 @@ A production-ready booking website for padel & squash clubs. Built with **Next.j
 
 ![VOLT Padel & Squash Club — the storefront and booking flow, on desktop and mobile](docs/cover.png)
 
-A dark, technical club aesthetic — near-black surfaces, electric-orange accent, and a monospace display face — with **two booking surfaces over one store**: a Playtomic-style in-page **court booking grid** for rentals, and a classic **coach-led training flow** for lessons and group classes. Full storefront included — courts, trainings, coaches, checkout, customer accounts — wired up out of the box. MIT licensed: clone it, rebrand it, ship it.
+A dark, technical club aesthetic — near-black surfaces, electric-orange accent, and a monospace display face — for a **multi-club network**: a club-first, full-screen **court booking page** (a live hall map of every court, or a courts × time grid) for rentals, and a classic **coach-led training flow** for lessons and group classes. Full storefront included — courts, trainings, coaches, checkout, customer accounts — wired up out of the box. MIT licensed: clone it, rebrand it, ship it.
 
 ---
 
@@ -14,7 +14,7 @@ A dark, technical club aesthetic — near-black surfaces, electric-orange accent
 
 ### 1. Create an Opencals account
 
-Sign up at **[app.opencals.com](https://app.opencals.com)** and create a **Dev Store**. When prompted for a dataset, choose the **VOLT Padel & Squash** preset — this seeds your store with the club's padel and squash courts, coaches, training classes, add-ons, and its venue so your template looks exactly like the demo.
+Sign up at **[app.opencals.com](https://app.opencals.com)** and create a **Dev Store**. When prompted for a dataset, choose the **VOLT Padel & Squash** preset — this seeds your store with four clubs (Madrid, Barcelona, Valencia, Málaga), their padel doubles, padel singles and squash courts, coaches, training classes and add-ons, so your template looks exactly like the demo.
 
 ### 2. Get your API key
 
@@ -38,7 +38,7 @@ That's it. Once deployed, you'll have the same fully functional booking site as 
 
 ## The Storefront
 
-A full-bleed, cinematic homepage — sport-first, with a live "next free court" chip, a two-mode intro (rent a court vs. train with a coach), a coaches teaser, and a facility gallery — all driven by your Opencals data.
+A full-bleed, cinematic homepage with an "Our clubs" section (one card per club, straight into its courts), a two-mode intro (rent a court vs. train with a coach), sports with live court counts, a coaches teaser and a facility gallery, all driven by your Opencals data.
 
 ![Homepage hero — full-bleed, technical, electric-orange](docs/homepage-hero.png)
 
@@ -51,15 +51,26 @@ A full-bleed, cinematic homepage — sport-first, with a live "next free court" 
 
 ## What's Included
 
-### Court Booking Grid
+### Club-First Court Booking
 
-The centerpiece. A single grid shows **every court and every open slot at once** — no more guessing what's free. Flip the **Padel / Squash** toggle to switch which courts fill the rows, step through days, and tap any open cell to pick a court and duration. Each court is its own resource, so booking one court leaves every other court free — booked exactly like a real club.
+The centerpiece, full screen. Players don't look for a court in four cities at once, so `/book` starts from **one club**: the one in the link, the one this browser remembers, or the nearest one ("Near me" uses the club coordinates from your store). New visitors pick from photo cards that show each club's soonest free court. The club's page then has two views over the same live data:
 
-- **Custom durations.** Courts book in 30-minute steps up to two hours; the grid composes consecutive free slots into 30 / 60 / 90 / 120-minute options and prices each one live.
-- **Hover-preview & confirm.** Hovering a duration highlights the spanned cells on the grid; a Confirm button commits — no accidental redirects.
-- **Sport backdrop & court gallery.** The grid sits over an ambient, sport-aware backdrop, with a gallery of every court below so players know exactly where they'll play.
+- **Hall map.** Every court from above, doubles wide and singles narrow, lit for one start time: orange = free for the whole game, a pulsing edge = free within the hour, dim = free later ("from 21:00"), hatched = taken for the day. Drag the time bar (its bars are the number of free courts per half hour) or tap a quick time; "Book 19:30" takes the best free court in one tap, and tapping a court lists its own free starts.
+- **Grid.** Courts × half hours for the day, with a now-line. Tap a free cell, pick 30 / 60 / 90 / 120 minutes (hovering previews the spanned cells), confirm.
 
-![Book a court — every court and open slot on one grid, with a duration popover](docs/book-a-court.png)
+Pick a day (14 days ahead, sold-out days struck through), a sport (only the club's sports show) and a game length. Everything is in the URL (`/book?club=volt-madrid&sport=padel&date=…&length=90&time=19:30&view=grid`), so links to a club, a day or a time just work.
+
+**Fast by design.** The page makes **one request per club**: `/api/clubs/[id]/availability` reads each court's free ranges for the whole booking window once (merged availability), caches each court for 60 seconds on the server, and the browser computes the map, the grid, the pulse and every "free from" locally. Switching day, length, sport or view never calls the API. A booking, cancel or reschedule invalidates the cached courts at once.
+
+![Book a court — the hall map](docs/book-a-court.png)
+
+### Multi-Club Model (store conventions)
+
+- **Club = store location.** Title, address, coordinates and timezone come from the location (and its courts' schedule). Photos, a tagline, hours and a phone number per club live in `siteConfig.clubs.presentation`, matched by location slug or city.
+- **Court = one product variant**, assigned to exactly one club, in a court collection (`padel-courts`, `squash-courts`). Give each court `allowCustomDuration` with a 30-minute base and a 2-hour maximum. Each court is its own resource, so booking one court leaves the others free.
+- **Format from the variant title.** `Court 7 · Singles` is a singles court (narrow tile, 2 players); anything else is doubles (4 players). Court numbers come from the title too.
+- **Sports are config.** `siteConfig.sports` maps a court collection (and a training collection) to a label and colour. Add pickleball by adding an entry and its collections; a club only shows the sports it has courts for.
+- **Training and coaches per club.** Training products and coaches are assigned to locations; `/training` and `/coaches` filter by club and default to the remembered one.
 
 ### Coach-Led Training
 
@@ -92,7 +103,7 @@ The homepage hero is a full-bleed background that upgrades to a looping video au
 
 ### Mobile-First Design
 
-Fully responsive. The court grid scrolls horizontally on phones with a sticky court-name column; the training flow is a card-stack that feels native on mobile and expands to two columns on desktop.
+Fully responsive. The hall map reflows its courts to the screen and the grid scrolls horizontally on phones with a sticky court-name column; the training flow is a card-stack that feels native on mobile and expands to two columns on desktop.
 
 ### SEO Ready
 
@@ -146,7 +157,8 @@ Open [http://localhost:3000](http://localhost:3000).
 All club-specific copy is centralized in **`lib/site-config.ts`**:
 
 - Club name, tagline, logo wordmark
-- The two sports (labels, court counts, price hints, collection slugs)
+- Sports (labels, colours, price hints, court and training collection slugs)
+- Club presentation (photo, tagline, hours, phone per club)
 - Homepage hero, "two ways to play" modes, training levels, stats, process steps
 - Coaches, gallery, testimonials, FAQs
 - About page story, contact information (address, phone, email, hours)
@@ -173,7 +185,7 @@ Tip: keep the accent aligned with your store's storefront primary color so the d
 
 ### Imagery
 
-Drop hero, sport, gallery, coach, and court images into `public/images/{hero,sports,gallery,coaches,courts}/` (and an optional `public/videos/hero.mp4`). See **`public/images/PLACEHOLDERS.md`** for filenames and recommended dimensions. Court, training and coach photos in the live booking flow come from your Opencals store, not this folder.
+Drop hero, sport, gallery, coach and club images into `public/images/{hero,sports,gallery,coaches,about}/` (and an optional `public/videos/hero.mp4`). See **`public/images/PLACEHOLDERS.md`** for filenames and recommended dimensions. Court, training and coach photos in the live booking flow come from your Opencals store, not this folder.
 
 ### Adding Pages
 
@@ -188,8 +200,8 @@ Drop hero, sport, gallery, coach, and court images into `public/images/{hero,spo
 ```
 app/
   page.tsx                     # Homepage
-  book/page.tsx                # Court booking grid (padel / squash toggle)
-  training/page.tsx            # Training catalog (filter by sport / level / format)
+  book/page.tsx                # Club-first court booking (hall map | grid)
+  training/page.tsx            # Training catalog (filter by club / sport / level / format)
   booking/[slug]/page.tsx      # Coach-led training booking flow
   thank-you/page.tsx           # Post-checkout confirmation
   coaches/                     # Meet the coaches
@@ -199,18 +211,21 @@ app/
   auth/                        # Sign in, sign up, password reset
   link/[token]/                # One-time email link resolver
   api/                         # API routes proxy SDK calls server-side
+    clubs/[locationId]/availability  # One club's court availability (cached per court)
 
 components/
   layout/{header,footer}.tsx   # Site chrome
   home/                        # Hero, modes, sports, training levels, coaches, gallery, ...
-  booking/                     # Court grid, sport backdrop, court gallery, duration popover,
-                               #   training flow (staff/time selectors), add-ons, checkout steps
+  book/                        # Club chooser, club hero, hall map, toolbar, court checkout
+  booking/                     # Court grid, duration popover, training flow
+                               #   (staff/time selectors), add-ons, checkout steps
   account/                     # Customer dashboard components
   ui/                          # Shared primitives (button, input, ...)
 
 contexts/                      # cart, location, timezone, settings
-hooks/                         # use-court-grid, use-court-booking, use-booking-flow, ...
-lib/                           # site-config, opencals (SDK), auth (NextAuth), schemas, format, utils
+hooks/                         # use-home-club, use-club-availability, use-club-grid, use-court-booking, use-booking-flow, ...
+lib/                           # club (catalogue + availability maths), availability-server, server-data,
+                               #   site-config, opencals (SDK), auth (NextAuth), schemas, format, utils
 ```
 
 ## Environment Variables

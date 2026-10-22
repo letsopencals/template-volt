@@ -1,25 +1,24 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { CourtGridCourt } from '@/app/api/courts/[collection]/route';
-import type { DurationOption, GridColumn } from '@/hooks/use-court-grid';
-import { nowInTimezone } from '@/hooks/use-court-grid';
+import moment from 'moment-timezone';
+import { sportOf, type Court } from '@/lib/club';
+import type { DurationOption, GridColumn } from '@/hooks/use-club-grid';
 import { DurationPopover } from '@/components/booking/duration-popover';
 import { AnchoredPopover, type AnchorRect } from '@/components/booking/anchored-popover';
 
 interface CourtGridProps {
-	courts: CourtGridCourt[];
+	courts: Court[];
 	columns: GridColumn[];
-	courtsLoading: boolean;
 	slotsLoading: boolean;
 	error: boolean;
 	date: string;
 	timezone: string;
-	slotAt: (courtId: string, columnKey: string) => unknown | null;
-	durationOptions: (court: CourtGridCourt, columnKey: string) => DurationOption[];
+	isFree: (courtId: string, columnKey: string) => boolean;
+	durationOptions: (court: Court, columnKey: string) => DurationOption[];
 	isCourtPending: (courtId: string) => boolean;
 	currency: string | undefined;
-	onSelect: (court: CourtGridCourt, option: DurationOption) => void;
+	onSelect: (court: Court, option: DurationOption) => void;
 }
 
 interface OpenCell {
@@ -49,19 +48,18 @@ const BOOKED_CELL_STYLE: React.CSSProperties = {
 
 /** Live minutes-since-midnight in `timezone` if `date` is today, else null. */
 function todayNowMinutes(date: string, timezone: string): number | null {
-	const { dateStr, minutes } = nowInTimezone(timezone);
-	return dateStr === date ? minutes : null;
+	const now = moment().tz(timezone);
+	return now.format('YYYY-MM-DD') === date ? now.hours() * 60 + now.minutes() : null;
 }
 
 export function CourtGrid({
 	courts,
 	columns,
-	courtsLoading,
 	slotsLoading,
 	error,
 	date,
 	timezone,
-	slotAt,
+	isFree,
 	durationOptions,
 	isCourtPending,
 	currency,
@@ -142,18 +140,6 @@ export function CourtGrid({
 		return (
 			<div className="rounded-3xl border border-dashed border-[var(--color-line-strong)] bg-[var(--color-surface)] py-14 text-center">
 				<p className="text-sm text-[var(--color-ink-muted)]">Couldn’t load court availability. Please try again.</p>
-			</div>
-		);
-	}
-
-	if (courtsLoading) {
-		return (
-			<div className="rounded-3xl border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-				<div className="space-y-2.5">
-					{Array.from({ length: 10 }).map((_, i) => (
-						<div key={i} className="h-10 animate-pulse rounded-lg bg-[var(--color-surface-2)]/50" />
-					))}
-				</div>
 			</div>
 		);
 	}
@@ -289,11 +275,16 @@ export function CourtGrid({
 								>
 									<span
 										className="h-5 w-1 shrink-0 rounded-full"
-										style={{ backgroundColor: court.color === 'cyan' ? 'var(--color-sage)' : 'var(--color-primary)' }}
+										style={{ backgroundColor: sportOf(court.sport).accent }}
 									/>
 									<span className="truncate text-sm font-semibold text-[var(--color-ink)]">
-										{court.variantTitle}
+										Court {court.number}
 									</span>
+									{court.format === 'singles' ? (
+										<span className="ml-auto rounded-sm border border-[var(--color-line-strong)] px-1 font-mono text-[0.6rem] font-bold text-[var(--color-ink-muted)]">
+											1v1
+										</span>
+									) : null}
 								</div>
 								{columns.map((col, colIndex) => {
 									const pending = isCourtPending(court.id);
@@ -308,7 +299,7 @@ export function CourtGrid({
 											/>
 										);
 									}
-									const available = slotAt(court.id, col.key) !== null;
+									const available = isFree(court.id, col.key);
 									// Booked cells are plain divs, not disabled buttons: disabled
 									// buttons may swallow mouse events, which would leave a stale
 									// preview while hovering across them.
@@ -332,7 +323,7 @@ export function CourtGrid({
 											data-court-cell
 											onClick={(e) => handleCellClick(e, court.id, col.key, colIndex)}
 											onMouseEnter={() => handleCellHover(court.id, colIndex)}
-											aria-label={`${court.variantTitle} at ${col.label}`}
+											aria-label={`Court ${court.number}${court.format === 'singles' ? ' (singles)' : ''} at ${col.label}`}
 											className={`h-10 shrink-0 rounded-md border transition-all ${
 												isOpenCell || inPreview
 													? 'border-[var(--color-primary)] bg-[var(--color-primary)]'
@@ -353,7 +344,7 @@ export function CourtGrid({
 				{open && openCourt && openColumn ? (
 					<AnchoredPopover ref={popoverRef} anchor={open.anchor}>
 						<DurationPopover
-							courtTitle={`${openCourt.title} · ${openCourt.variantTitle}`}
+							courtTitle={`Court ${openCourt.number}${openCourt.format === 'singles' ? ' · Singles' : ''}`}
 							startLabel={openColumn.label}
 							options={openOptions}
 							currency={currency}

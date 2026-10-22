@@ -17,7 +17,7 @@ const CARD_MOTION = {
 	viewport: { once: true, margin: '-60px' },
 };
 
-export function SportsCards() {
+export function SportsCards({ stats }: { stats: Record<string, { courts: number; clubs: number }> }) {
 	const { sports } = siteConfig;
 
 	return (
@@ -26,7 +26,7 @@ export function SportsCards() {
 				<div className="max-w-2xl">
 					<span className="chip">
 						<span className="h-1.5 w-1.5 rounded-full bg-[var(--color-primary)]" />
-						Two sports, one club
+						Padel &amp; squash
 					</span>
 					<h2 className="heading-display mt-5 text-4xl text-[var(--color-ink)] lg:text-5xl">
 						Pick your <span className="text-[var(--color-primary)]">game.</span>
@@ -64,14 +64,18 @@ export function SportsCards() {
 									}}
 								/>
 
-								{/* court count badge */}
-								<span
-									className="absolute right-6 top-6 heading-display text-6xl leading-none"
-									style={{ color: sport.accent }}
-								>
-									{sport.courtCount}
-									<span className="ml-2 align-top text-[0.7rem] font-semibold uppercase tracking-[0.24em]">courts</span>
-								</span>
+								{/* court count badge (from the store) */}
+								{stats[sport.key]?.courts ? (
+									<span
+										className="absolute right-6 top-6 heading-display text-6xl leading-none"
+										style={{ color: sport.accent }}
+									>
+										{stats[sport.key]!.courts}
+										<span className="ml-2 align-top text-[0.7rem] font-semibold uppercase tracking-[0.24em]">
+											courts · {stats[sport.key]!.clubs} {stats[sport.key]!.clubs === 1 ? 'club' : 'clubs'}
+										</span>
+									</span>
+								) : null}
 
 								{/* body */}
 								<div className="relative p-8 lg:p-10">
