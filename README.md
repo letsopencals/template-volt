@@ -74,7 +74,7 @@ Pick a day (14 days ahead, sold-out days struck through), a sport (only the club
 
 ### Coach-Led Training
 
-A separate, classic booking flow for lessons and classes. Browse the training catalog by sport, level (Starter → Advanced) and format (individual vs. group), pick a coach — or **"Any coach"** — choose a date and time, then check out. Group classes show **live "N left"** spots and fill up as they book.
+Lessons and classes per club. Browse the training catalog by club, sport, level (Starter → Advanced) and format (individual vs. group), then book: pick the level, club and coach (or **"Any coach"**), a day and a start. Group classes show **live "N left"** places and you can book more than one.
 
 ![Training booking — choose a level, a coach, a date and a time](docs/training-booking.png)
 
@@ -83,15 +83,25 @@ A separate, classic booking flow for lessons and classes. Browse the training ca
 - **Courts** are staffless resources (the Opencals *Self* rule + `maxAttendees: 1`) — an independent, exclusively-booked unit each.
 - **Trainings** are assigned to real **coaches** (the *Staff* rule) and can carry **group capacity** (`maxAttendees > 1`), which drives the "spots left" display.
 
-Order and appointment detail reads naturally either way — "Padel Court 3 — 90 min" for a rental, "Intermediate Group — with Coach Marta" for a class.
+Bookings read naturally either way: "Padel · Court 3 · 1h 30m" for a rental, "Padel Group Class · Intermediate · Coach Marta" for a class.
 
-### Checkout with Stripe
+### The Game Flow (checkout)
 
-Multi-step checkout with add-ons (racket & ball rental, etc.), custom questions, customer info, and secure payment via Stripe Elements. Auto-login after checkout so the player lands in their account with the new booking.
+One checkout for courts and training, built like a match sheet: numbered steps that fold up as you go, with a sticky **match card** (court from above, day, time, length, who's on court, running total, hold timer).
+
+- **Courts:** Your court (any court, falling back to the next free one, or exactly the one you tapped) → **Your crew** (up to three players by name; an email invites them, and the card shows each player's share) → **Kit** (your store's add-ons: rackets, balls…) → Your details → Payment.
+- **Training:** Your session (level, club, coach, day, start, places) → Kit → Your details → Payment.
+- Payment uses your store's providers: card via Stripe Elements, or pay at the club. Auto sign-in after checkout.
+
+### Match-Ticket Confirmation
+
+`/thank-you` opens on the club photo ("Game on, Sam! / VOLT Madrid") with the **match ticket**: the court from above with a spot per player (doubles, singles or squash), day, time, length, players, booking reference, kit and a live countdown. Then add-to-calendar (.ics), directions, send-to-crew, your crew, "Before you play", "Getting there" (address, hours, map link), the free-cancellation line and **"Same time next week?"**. Guests see it too, from a snapshot of the flow.
 
 ### Customer Accounts
 
-Passwordless sign-in by default: players enter their email and receive a 6-digit login code (password sign-in stays available as a fallback). Once signed in they can view bookings, browse order history, manage their profile, and reschedule or cancel.
+Passwordless sign-in by default: players enter their email and receive a 6-digit login code (password sign-in stays available as a fallback). **My games** shows a stats strip (games played, hours on court, your club, clubs played), the next game as a full ticket, upcoming games and trainings, the players you play with, and past games with **Book again**. Each game can invite more players by email, change time or cancel; orders and details are one tab away.
+
+Review every post-booking state without a store at **`/preview/index`** (fixture clubs and games; on in development, or set `VOLT_PREVIEW=1`).
 
 One-time email links from Opencals (view/reschedule/cancel booking, leave feedback, verify email, reset password) all resolve through the `/link/[token]` route, which signs the customer in and redirects them to the right place.
 
@@ -202,8 +212,9 @@ app/
   page.tsx                     # Homepage
   book/page.tsx                # Club-first court booking (hall map | grid)
   training/page.tsx            # Training catalog (filter by club / sport / level / format)
-  booking/[slug]/page.tsx      # Coach-led training booking flow
-  thank-you/page.tsx           # Post-checkout confirmation
+  booking/[slug]/page.tsx      # Training booking (the game flow)
+  thank-you/page.tsx           # Match-ticket confirmation
+  preview/[screen]/            # Fixture previews of confirmation + account states
   coaches/                     # Meet the coaches
   about/                       # About page
   contact/                     # Contact form + info
@@ -216,15 +227,15 @@ app/
 components/
   layout/{header,footer}.tsx   # Site chrome
   home/                        # Hero, modes, sports, training levels, coaches, gallery, ...
-  book/                        # Club chooser, club hero, hall map, toolbar, court checkout
-  booking/                     # Court grid, duration popover, training flow
-                               #   (staff/time selectors), add-ons, checkout steps
+  book/                        # Club chooser, club hero, hall map, toolbar
+  booking/                     # Court grid, duration popover, Stripe Elements
+  game/                        # Game flow (steps + match card), confirmation, account
   account/                     # Customer dashboard components
   ui/                          # Shared primitives (button, input, ...)
 
 contexts/                      # cart, location, timezone, settings
-hooks/                         # use-home-club, use-club-availability, use-club-grid, use-court-booking, use-booking-flow, ...
-lib/                           # club (catalogue + availability maths), availability-server, server-data,
+hooks/                         # use-home-club, use-club-availability, use-club-grid, use-game-booking, use-game-checkout, ...
+lib/                           # club (catalogue + availability maths), game (appointment → game), availability-server, server-data,
                                #   site-config, opencals (SDK), auth (NextAuth), schemas, format, utils
 ```
 
@@ -234,9 +245,10 @@ lib/                           # club (catalogue + availability maths), availabi
 |----------|----------|-------------|
 | `OPENCALS_API_KEY` | Yes | Storefront API key from your Opencals dashboard |
 | `AUTH_SECRET` | Yes | Random string for NextAuth session encryption |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | No | Stripe publishable key for payment processing |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | No | Stripe publishable key; fallback when the API doesn't return one with checkout |
 | `OPENCALS_API_URL` | No | Override API base URL (defaults to production) |
 | `NEXT_PUBLIC_BASE_URL` | No | Public site URL (for sitemap) |
+| `VOLT_PREVIEW` | No | `1` serves `/preview/[screen]` in production (always on in development) |
 
 ---
 

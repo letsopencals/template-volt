@@ -88,15 +88,12 @@ composes the smaller ones (`hooks/use-booking-flow.ts`).
 ## Bundle
 
 - Load heavy / below-the-fold components with `next/dynamic`. Stripe is loaded
-  this way in `components/booking/booking-view.tsx` (`PaymentStep`, `ssr: false`)
+  this way in `components/game/game-flow.tsx` (`PaymentStep`, `ssr: false`)
   so it isn't in the initial bundle.
 - Import directly from module paths; avoid barrel/index re-export files that pull
   in more than you use.
 
-## VOLT — two booking surfaces (padel & squash club)
-
-This template ships **two distinct booking flows** over one store, because the club
-sells two different kinds of thing:
+## VOLT — courts and training over one multi-club store
 
 **1. Court rentals — club-first `/book` (Hall map | Grid).** Clubs are store locations;
 each court is one product variant in a court collection (`siteConfig.sports[].courtsCollection`),
@@ -113,22 +110,29 @@ resource) and `allowCustomDuration` (30-min base, up to 2h; priced `ceil(bookedM
 - UI: `components/book/book-view.tsx` (club from `?club=` / remembered `@opencals/location` /
   "Near me" via `hooks/use-home-club.ts`; URL state via `replaceState`) → `club-chooser`,
   `club-hero`, `book-controls`, `hall-map` or `components/booking/court-grid.tsx`
-  (+ `hooks/use-club-grid.ts`, `duration-popover`) → `components/book/court-checkout.tsx` +
-  `hooks/use-court-booking.ts` (extras → questions → details → payment). There is **no
-  `staffMemberId`** anywhere in this flow — the court product is the resource.
+  (+ `hooks/use-club-grid.ts`, `duration-popover`) → the game flow below. There is **no
+  `staffMemberId`** anywhere in a court booking; the court product is the resource.
 
-**2. Coached training — the classic flow (`/training` → `/booking/[slug]`).** Training
-products are assigned to real coach staff (*Staff* conflict rule) and may have group
-capacity (`maxAttendees > 1`). This reuses the shared multi-step flow verbatim:
-`components/booking/booking-view.tsx` + `hooks/use-booking-flow.ts` (when → coach →
-extras → questions → details → payment), with `staff-selector.tsx` repurposed as the
-coach selector and `time-slots.tsx` surfacing "X spots left" from the slot's
-`attendees`/`maxAttendees`.
+**2. Coached training (`/training` → `/booking/[slug]`).** Training products are assigned to
+coach staff (*Staff* conflict rule) and clubs (locations), and may have group capacity
+(`maxAttendees > 1`). `/training` filters by club, sport, format and level.
 
-When touching booking code, know which surface a file belongs to: `components/book/*`,
-`court-grid`, `duration-popover`, `use-club-*`, `use-court-booking`, `use-home-club` are court-only; `booking-view` /
-`use-booking-flow` / `staff-selector` are training-only; `addons-selector`,
-`questions-form`, `details-step`, `payment-step` are **shared** by both.
+**One checkout for both: the game flow** (`components/game/game-flow.tsx` +
+`hooks/use-game-booking.ts`, `hooks/use-game-checkout.ts`). Numbered accordion steps
+(`step-section.tsx`) with a sticky match card. Courts: court → crew → kit → details →
+payment; trainings: session (level, club, coach, day, start, places) → kit → details →
+payment. Crew names go in `customAttributes.crew`, crew emails as appointment `guests`.
+A snapshot of the game is saved to sessionStorage (`lib/game-snapshot.ts`) so guests see
+the ticket on `/thank-you`.
+
+**After booking.** `lib/game.ts` reads any appointment as a `Game` (court or training, club,
+crew, kit). `/thank-you` (`components/game/confirmation/*`: hero, match ticket, crew,
+before you play, getting there, next week) and the account (`components/game/account/*`:
+stats, tickets, past games, crew invites via `/api/account/appointments/[id]/guests`,
+change-time and cancel modals) are built on it. `/preview/[screen]` renders every state
+with fixtures (`lib/preview-fixtures.ts`; dev, or `VOLT_PREVIEW=1`).
+
+`components/booking/` now only holds the court grid, its popovers and Stripe Elements.
 
 ## Verifying changes
 
@@ -136,6 +140,6 @@ When touching booking code, know which surface a file belongs to: `components/bo
   (static) or `ƒ` (dynamic) Server Components — not shipped as pure client pages.
 - Smoke test: `/book` shows the club chooser on a fresh browser, then the club's hall map
   (one `/api/clubs/<id>/availability` request); the time bar re-lights courts; "Book HH:MM" and a
-  grid cell → duration popover both reach the court checkout; the training catalog (`/training`)
-  filters by sport/format and the flow (`/booking/[slug]`) books a coached session
-  with a chosen coach and shows group spots-left.
+  grid cell → duration popover both open the game flow; `/booking/[slug]` books a training
+  with a chosen coach and shows places left; `/preview/index` lists the confirmation and
+  account states.
