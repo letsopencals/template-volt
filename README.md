@@ -4,7 +4,7 @@ A production-ready booking website for padel & squash clubs. Built with **Next.j
 
 **[View Live Demo →](https://template-volt.vercel.app)**
 
-![VOLT Padel & Squash Club — the storefront and booking flow, on desktop and mobile](docs/cover.png)
+![VOLT Padel & Squash Club — the hall map on desktop and the match ticket on mobile](docs/cover.png)
 
 A dark, technical club aesthetic — near-black surfaces, electric-orange accent, and a monospace display face — for a **multi-club network**: a club-first, full-screen **court booking page** (a live hall map of every court, or a courts × time grid) for rentals, and a classic **coach-led training flow** for lessons and group classes. Full storefront included — courts, trainings, coaches, checkout, customer accounts — wired up out of the box. MIT licensed: clone it, rebrand it, ship it.
 
@@ -40,12 +40,13 @@ That's it. Once deployed, you'll have the same fully functional booking site as 
 
 A full-bleed, cinematic homepage with an "Our clubs" section (one card per club, straight into its courts), a two-mode intro (rent a court vs. train with a coach), sports with live court counts, a coaches teaser and a facility gallery, all driven by your Opencals data.
 
-![Homepage hero — full-bleed, technical, electric-orange](docs/homepage-hero.png)
+![Homepage hero — full-bleed video, four clubs, one account](docs/homepage-hero.png)
 
-<!-- Add more storefront screenshots here as you capture them, e.g.:
-![Coaches — meet the team](docs/coaches.png)
-![Training catalog — filter by sport, level and format](docs/training-catalog.png)
--->
+![Our clubs — one card per club, straight into its courts](docs/clubs.png)
+
+![Coaches — filter the bench by club](docs/coaches.png)
+
+![Training catalog — filter by club, sport, format and level](docs/training-catalog.png)
 
 ---
 
@@ -62,7 +63,11 @@ Pick a day (14 days ahead, sold-out days struck through), a sport (only the club
 
 **Fast by design.** The page makes **one request per club**: `/api/clubs/[id]/availability` reads each court's free ranges for the whole booking window once (merged availability), caches each court for 60 seconds on the server, and the browser computes the map, the grid, the pulse and every "free from" locally. Switching day, length, sport or view never calls the API. A booking, cancel or reschedule invalidates the cached courts at once.
 
-![Book a court — the hall map](docs/book-a-court.png)
+![Pick your club — photo cards with each club's next free court, and Near me](docs/club-chooser.png)
+
+![Book a court — the hall map: every court from above, lit for one start time](docs/book-a-court.png)
+
+![Book a court — the grid: courts × half hours, with the duration popover](docs/court-grid.png)
 
 ### Multi-Club Model (store conventions)
 
@@ -93,13 +98,19 @@ One checkout for courts and training, built like a match sheet: numbered steps t
 - **Training:** Your session (level, club, coach, day, start, places) → Kit → Your details → Payment.
 - Payment uses your store's providers: card via Stripe Elements, or pay at the club. Auto sign-in after checkout.
 
+![Checkout — numbered steps (court, crew, kit, details, payment) beside the match card](docs/checkout.png)
+
 ### Match-Ticket Confirmation
 
 `/thank-you` opens on the club photo ("Game on, Sam! / VOLT Madrid") with the **match ticket**: the court from above with a spot per player (doubles, singles or squash), day, time, length, players, booking reference, kit and a live countdown. Then add-to-calendar (.ics), directions, send-to-crew, your crew, "Before you play", "Getting there" (address, hours, map link), the free-cancellation line and **"Same time next week?"**. Guests see it too, from a snapshot of the flow.
 
+![Confirmation — the match ticket with the court from above and a countdown](docs/thank-you.png)
+
 ### Customer Accounts
 
 Passwordless sign-in by default: players enter their email and receive a 6-digit login code (password sign-in stays available as a fallback). **My games** shows a stats strip (games played, hours on court, your club, clubs played), the next game as a full ticket, upcoming games and trainings, the players you play with, and past games with **Book again**. Each game can invite more players by email, change time or cancel; orders and details are one tab away.
+
+![My games — stats strip and the next game as a full ticket](docs/account.png)
 
 Review every post-booking state without a store at **`/preview/index`** (fixture clubs and games; on in development, or set `VOLT_PREVIEW=1`).
 
@@ -114,6 +125,12 @@ The homepage hero is a full-bleed background that upgrades to a looping video au
 ### Mobile-First Design
 
 Fully responsive. The hall map reflows its courts to the screen and the grid scrolls horizontally on phones with a sticky court-name column; the training flow is a card-stack that feels native on mobile and expands to two columns on desktop.
+
+<p align="center">
+  <img src="docs/mobile-hall.png" alt="The hall map on a phone" width="300" />
+  &nbsp;&nbsp;
+  <img src="docs/mobile-ticket.png" alt="The match ticket on a phone" width="300" />
+</p>
 
 ### SEO Ready
 
