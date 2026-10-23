@@ -4,7 +4,7 @@ A production-ready booking website for padel & squash clubs. Built with **Next.j
 
 **[View Live Demo →](https://template-volt.vercel.app)**
 
-![VOLT Padel & Squash Club — the hall map on desktop and the match ticket on mobile](docs/cover.png)
+![VOLT Padel & Squash Club — the hall map on a laptop, the court grid on a tablet and the match ticket on a phone, at a club reception counter](docs/cover.png)
 
 A dark, technical club aesthetic — near-black surfaces, electric-orange accent, and a monospace display face — for a **multi-club network**: a club-first, full-screen **court booking page** (a live hall map of every court, or a courts × time grid) for rentals, and a classic **coach-led training flow** for lessons and group classes. Full storefront included — courts, trainings, coaches, checkout, customer accounts — wired up out of the box. MIT licensed: clone it, rebrand it, ship it.
 
