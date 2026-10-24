@@ -120,7 +120,7 @@ One-time email links from Opencals (view/reschedule/cancel booking, leave feedba
 
 ### Cinematic Hero, Video-Ready
 
-The homepage hero is a full-bleed background that upgrades to a looping video automatically when `public/videos/hero.mp4` is present, and falls back to a still image otherwise — zero code changes either way.
+The homepage hero is a full-bleed background with a looping video (`public/videos/hero.mp4`) over a still image. To use the still only, set `heroVideoSrc` to `null` in `app/page.tsx`.
 
 ### Mobile-First Design
 
@@ -212,7 +212,7 @@ Tip: keep the accent aligned with your store's storefront primary color so the d
 
 ### Imagery
 
-Drop hero, sport, gallery, coach and club images into `public/images/{hero,sports,gallery,coaches,about}/` (and an optional `public/videos/hero.mp4`). See **`public/images/PLACEHOLDERS.md`** for filenames and recommended dimensions. Court, training and coach photos in the live booking flow come from your Opencals store, not this folder.
+Drop hero, sport, gallery, coach and club images into `public/images/{hero,sports,gallery,coaches,about}/` (and the hero video at `public/videos/hero.mp4`). See **`public/images/PLACEHOLDERS.md`** for filenames and recommended dimensions. Court, training and coach photos in the live booking flow come from your Opencals store, not this folder.
 
 ### Adding Pages
 

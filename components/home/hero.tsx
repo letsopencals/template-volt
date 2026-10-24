@@ -8,9 +8,8 @@
  * and a live availability chip are overlaid bottom-left, with a technical stat bar
  * pinned to the bottom edge. Deliberately unlike the clinic template's split layout.
  *
- * `videoSrc` is resolved on the server (see app/page.tsx) by checking whether a
- * `public/videos/hero.mp4` exists, so the hero upgrades to video automatically when
- * one is dropped in — and falls back to the still image with zero code changes.
+ * `videoSrc` is set in app/page.tsx (`public/videos/hero.mp4` by default); pass null
+ * to render the still image only.
  */
 
 import { useEffect, useRef } from 'react';

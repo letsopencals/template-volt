@@ -1,5 +1,3 @@
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { Hero } from '@/components/home/hero';
 import { ModesBand } from '@/components/home/modes-band';
 import { SportsCards } from '@/components/home/sports-cards';
@@ -14,11 +12,10 @@ import { CtaBand } from '@/components/home/cta-band';
 import { ClubsSection } from '@/components/home/clubs-section';
 import { getCatalogue } from '@/lib/server-data';
 
-// Upgrade the hero to a looping video automatically when public/videos/hero.mp4
-// exists; otherwise the hero renders the cinematic still. Checked on the server.
-const heroVideoSrc = existsSync(join(process.cwd(), 'public/videos/hero.mp4'))
-	? '/videos/hero.mp4'
-	: null;
+// The hero plays public/videos/hero.mp4 over the still image. Set this to null to use
+// the still only. Don't detect the file with fs at runtime: on Vercel, public/ isn't in
+// the server function, so an ISR revalidation would silently drop the video.
+const heroVideoSrc: string | null = '/videos/hero.mp4';
 
 export default async function HomePage() {
 	const cat = await getCatalogue();
