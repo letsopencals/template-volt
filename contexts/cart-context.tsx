@@ -37,7 +37,7 @@ export function useCart() {
 }
 
 function getCartHeaders(cartId: string | null): Record<string, string> {
-	return cartId ? { 'X-CartResponse-Id': cartId } : {};
+	return cartId ? { 'X-Cart-Id': cartId } : {};
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
