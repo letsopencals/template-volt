@@ -30,7 +30,6 @@ During deployment, Vercel will ask you to set environment variables:
 |----------|-------|
 | `OPENCALS_API_KEY` | Your private storefront key (starts with `spk_`) |
 | `AUTH_SECRET` | Any random string — used for session encryption |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | *(optional)* Stripe publishable key for payments |
 
 That's it. Once deployed, you'll have the same fully functional booking site as the [live demo](https://template-volt.vercel.app).
 
@@ -262,7 +261,6 @@ lib/                           # club (catalogue + availability maths), game (ap
 |----------|----------|-------------|
 | `OPENCALS_API_KEY` | Yes | Private storefront key (`spk_`) from your Opencals dashboard |
 | `AUTH_SECRET` | Yes | Random string for NextAuth session encryption |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | No | Stripe publishable key; fallback when the API doesn't return one with checkout |
 | `OPENCALS_API_URL` | No | Override API base URL (defaults to production) |
 | `NEXT_PUBLIC_BASE_URL` | No | Public site URL (for sitemap) |
 | `VOLT_PREVIEW` | No | `1` serves `/preview/[screen]` in production (always on in development) |

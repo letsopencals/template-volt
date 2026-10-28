@@ -5,7 +5,6 @@ import { type Appearance, type StripeError, loadStripe } from '@stripe/stripe-js
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 
-const envPublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
 interface StripePaymentProps {
 	clientSecret: string;
@@ -18,7 +17,7 @@ interface StripePaymentProps {
 }
 
 export function StripePayment({ clientSecret, stripeAccountId, publishableKey: fromApi, onSuccess, onError, disabled }: StripePaymentProps) {
-	const publishableKey = fromApi || envPublishableKey;
+	const publishableKey = fromApi;
 	const stripePromise = useMemo(() => {
 		if (!publishableKey) return null;
 		return loadStripe(publishableKey, {
@@ -48,8 +47,7 @@ export function StripePayment({ clientSecret, stripeAccountId, publishableKey: f
 		return (
 			<div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6">
 				<p className="text-sm text-red-300">
-					Stripe is not configured. Set{' '}
-					<code className="rounded bg-red-500/20 px-1 py-0.5 text-xs">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> in your environment.
+					Card payments aren&rsquo;t set up for this store yet. Connect Stripe in the Opencals dashboard.
 				</p>
 			</div>
 		);
