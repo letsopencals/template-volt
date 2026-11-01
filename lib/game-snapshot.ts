@@ -1,15 +1,5 @@
-import type { Game, PendingReason } from '@/lib/game';
-
-/** How to pay a manual-payment order, as checkout submit returns it (SDK 0.3.20 `PaymentInstructions`). */
-export interface PaymentInstructions {
-	/** bank_transfer, cash or stripe_invoice */
-	provider: string;
-	/** Stripe invoice: the hosted page where the invoice is paid (null while it's being issued) */
-	hostedInvoiceUrl?: string | null;
-	/** Pay by this time (ISO 8601), or the booking is cancelled; null when there's no deadline */
-	dueAt?: string | null;
-	bankDetails?: { accountName?: string | null; bankName?: string | null; iban?: string | null; swift?: string | null } | null;
-}
+import type { PaymentInstructions } from '@opencals/storefront-sdk';
+import type { Game } from '@/lib/game';
 
 /**
  * The game the player just built, kept in sessionStorage so /thank-you can show the full match ticket even to a
@@ -42,7 +32,7 @@ export function saveSnapshot(s: GameSnapshot) {
 	}
 }
 
-export function patchSnapshot(patch: Partial<GameSnapshot> & { ref?: string; status?: string; pendingReason?: PendingReason | null }) {
+export function patchSnapshot(patch: Partial<GameSnapshot> & { ref?: string; status?: Game['status']; pendingReason?: Game['pendingReason'] }) {
 	const s = readSnapshot();
 	if (!s) return;
 	const { ref, status, pendingReason, ...rest } = patch;

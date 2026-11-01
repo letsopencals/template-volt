@@ -1,28 +1,22 @@
 import '@/lib/opencals';
-import { AppointmentService, CartService } from '@opencals/storefront-sdk';
+import {
+	AppointmentService,
+	CartService,
+	type AppointmentDateRangeSlot,
+	type AppointmentGuest,
+	type CheckoutQuestionAnswer,
+	type CreateAppointmentAddOn,
+	type ExistingOrderCustomer,
+	type NewOrderCustomer,
+} from '@opencals/storefront-sdk';
 import { getAccessToken } from '@/lib/api-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { handleApiError } from '@/lib/api-error-handler';
 
-interface AddOnSelection {
-	addOnId: string;
-	quantity?: number;
-}
-
-interface QuestionAnswerInput {
-	questionId: string;
-	question: string;
-	answer: string;
-}
-
-interface CustomerInput {
-	kind: 'new' | 'existing';
-	customerId?: string;
-	email?: string;
-	firstName?: string;
-	lastName?: string;
-}
+/** The booker as the flow sends it; `kind` picks which of the two shapes is meant. */
+type CustomerInput = Required<Pick<ExistingOrderCustomer | NewOrderCustomer, 'kind'>> &
+	Partial<Pick<ExistingOrderCustomer, 'customerId'> & Pick<NewOrderCustomer, 'email' | 'firstName' | 'lastName'>>;
 
 export async function POST(request: NextRequest) {
 	const cartIdHeader = request.headers.get('X-Cart-Id') ?? '';
@@ -30,21 +24,13 @@ export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();
 		const { slot, numberOfAttendees, addOns, customer, checkoutQuestionAnswers, guests, customAttributes } = body as {
-			slot: {
-				productId: string;
-				fromDate: string;
-				fromTime: string;
-				toDate: string;
-				toTime: string;
-				staffMemberId?: string | null;
-				locationId?: string | null;
-			};
+			slot: AppointmentDateRangeSlot;
 			numberOfAttendees?: number;
-			addOns?: AddOnSelection[];
+			addOns?: CreateAppointmentAddOn[];
 			customer?: CustomerInput;
-			checkoutQuestionAnswers?: QuestionAnswerInput[];
+			checkoutQuestionAnswers?: CheckoutQuestionAnswer[];
 			/** Crew emails: invited as guests (they get the booking emails; capacity is unaffected) */
-			guests?: { email: string }[];
+			guests?: AppointmentGuest[];
 			/** Free-form notes on the booking, e.g. `crew: "Sam, Alex"` */
 			customAttributes?: Record<string, string>;
 		};

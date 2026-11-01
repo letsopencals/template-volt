@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 
 /** A string field of the API's error body, e.g. `orderId` (CART_ALREADY_CHECKED_OUT) or `paymentStatus` (402). */
 function bodyField(err: OpencalsApiError, key: string): string | undefined {
-	const body = (err as { body?: unknown }).body;
-	const value = body && typeof body === 'object' ? (body as Record<string, unknown>)[key] : undefined;
+	const value = err.body?.[key];
 	return typeof value === 'string' ? value : undefined;
 }
 

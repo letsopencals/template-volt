@@ -1,4 +1,4 @@
-import type { OrderDetailResponse } from '@opencals/storefront-sdk';
+import type { OrderDetailResponse, OrderDetailTransaction } from '@opencals/storefront-sdk';
 import { formatPrice } from '@/lib/format';
 import type { Catalogue } from '@/lib/club';
 import { toGame, type Game } from '@/lib/game';
@@ -11,7 +11,7 @@ export function orderGames(order: OrderDetailResponse, cat: Catalogue): Game[] {
 		.filter((li) => li.appointment)
 		.map((li) =>
 			toGame(
-				li.appointment as never,
+				li.appointment!,
 				cat,
 				(li.addOnLineItems ?? []).map((x) => ({ title: x.addOn?.title ?? 'Extra', quantity: x.quantity })),
 			),
@@ -42,7 +42,7 @@ export function dueLine(amount: number, currency: string | undefined, provider: 
 }
 
 /** The payment method on an order: the provider of its first transaction, if there is one. */
-export function orderProvider(order: Pick<OrderDetailResponse, 'transactions'>): string | null {
+export function orderProvider(order: Pick<OrderDetailResponse, 'transactions'>): OrderDetailTransaction['provider'] | null {
 	return order.transactions?.find((t) => t.provider)?.provider ?? null;
 }
 
@@ -51,7 +51,7 @@ export function orderReceipt(order: OrderDetailResponse, provider: string | null
 	const paid = order.isFullyPaid || order.paymentStatus === 'paid';
 	return {
 		line:
-			(order.paymentStatus as string) === 'voided'
+			order.paymentStatus === 'voided'
 				? 'Cancelled, not charged'
 				: order.total <= 0
 					? 'Nothing to pay'

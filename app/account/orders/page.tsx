@@ -10,10 +10,7 @@ import { formatPrice } from '@/lib/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import { BTN, BTN_GHOST, Label } from '@/components/game/bits';
 
-// The SDK OrderListItemResponse type is missing `id` but it's returned by the API
-type OrderWithId = OrderListItemResponse & { id: string };
-
-const STATUS: Record<string, { label: string; tone: string }> = {
+const STATUS: Record<OrderListItemResponse['paymentStatus'], { label: string; tone: string }> = {
 	paid: { label: 'Paid', tone: 'border-emerald-500/40 text-emerald-400' },
 	unpaid: { label: 'To pay', tone: 'border-[var(--color-primary)]/50 text-[var(--color-primary)]' },
 	'partially-paid': { label: 'Part paid', tone: 'border-amber-500/40 text-amber-300' },
@@ -23,7 +20,7 @@ const STATUS: Record<string, { label: string; tone: string }> = {
 /** Orders as receipts: date block, what was booked, total and payment state. */
 export default function OrdersPage() {
 	const [page, setPage] = useState(1);
-	const { data, isLoading } = useSWR<{ data: OrderWithId[]; meta: CollectionMeta }>(`/api/account/orders?take=10&page=${page}`, fetcher, {
+	const { data, isLoading } = useSWR<{ data: OrderListItemResponse[]; meta: CollectionMeta }>(`/api/account/orders?take=10&page=${page}`, fetcher, {
 		revalidateOnFocus: false,
 		keepPreviousData: true,
 	});

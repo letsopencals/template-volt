@@ -10,7 +10,7 @@ import { BTN, Label } from '@/components/game/bits';
 
 export interface PaymentStepProps {
 	providers: CustomerProviderCatalogItem[];
-	provider: string | null;
+	provider: CustomerProviderCatalogItem['name'] | null;
 	paymentData: CheckoutStartResponse | null;
 	submitting: boolean;
 	isExpired: boolean;
@@ -29,7 +29,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const PANEL = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -8 }, transition: { duration: 0.4, ease: EASE } };
 
 /** Club words for the store's payment methods; anything else uses the store's own copy. */
-const COPY: Partial<Record<string, { title: string; note: string }>> = {
+const COPY: Partial<Record<CustomerProviderCatalogItem['name'], { title: string; note: string }>> = {
 	cash: { title: 'Pay at the club', note: 'Card or cash at reception' },
 	bank_transfer: { title: 'Bank transfer', note: 'Bank details on the next screen' },
 	stripe_invoice: { title: 'Pay by invoice', note: 'A secure invoice link by email' },
@@ -50,7 +50,7 @@ export function PaymentStep(p: PaymentStepProps) {
 		p.onSelectProvider(p.providers[0]!);
 	}, [p]);
 
-	const showStripe = selected?.checkoutMode === 'internal' && p.paymentData?.clientSecret && (p.paymentData.provider as string) !== 'no_payment_required';
+	const showStripe = selected?.checkoutMode === 'internal' && p.paymentData?.clientSecret && p.paymentData.provider !== 'no_payment_required';
 
 	if (p.providers.length === 0) {
 		return <p className="text-sm text-[var(--color-ink-muted)]">Online payment isn’t available right now. Call the club’s reception to book.</p>;
@@ -127,7 +127,7 @@ const MethodTile = memo(function MethodTile({
 
 function OfflineSheet({ method: provider, total, currency, dateLabel, club, submitting, isExpired, onConfirmOffline }: PaymentStepProps & { method: CustomerProviderCatalogItem }) {
 	const free = provider.checkoutMode === 'none' || total <= 0;
-	const name = provider.name as string;
+	const name = provider.name;
 	const bank = name === 'bank_transfer';
 	const invoice = name === 'stripe_invoice';
 	const cash = name === 'cash';

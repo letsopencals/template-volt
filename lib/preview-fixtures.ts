@@ -57,7 +57,7 @@ function appt(o: {
 	variantTitle?: string;
 	start: moment.Moment;
 	minutes: number;
-	status?: string;
+	status?: AppointmentLike['status'];
 	crew?: string;
 	guests?: string[];
 	seats?: number;

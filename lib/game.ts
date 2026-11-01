@@ -5,6 +5,7 @@
  * against the catalogue (clubs + courts).
  */
 import moment from 'moment-timezone';
+import type { AppointmentStatusType, StorefrontAppointmentPendingReason } from '@opencals/storefront-sdk';
 import { formatLabel, formatLength, playersOn, sportOf, type Catalogue, type Club, type CourtFormat } from '@/lib/club';
 import { siteConfig } from '@/lib/site-config';
 
@@ -12,9 +13,9 @@ import { siteConfig } from '@/lib/site-config';
 export interface AppointmentLike {
 	id: string;
 	name: string;
-	status: string;
-	/** Why a booked appointment is still pending (SDK 0.3.20+); null once confirmed */
-	pendingReason?: PendingReason | null;
+	status: AppointmentStatusType;
+	/** Why a booked appointment is still pending; null once confirmed */
+	pendingReason?: StorefrontAppointmentPendingReason | null;
 	from: string;
 	to: string;
 	productId?: string;
@@ -49,13 +50,11 @@ export interface AppointmentLike {
 
 export type GameKind = 'court' | 'training';
 
-export type PendingReason = 'awaiting_payment' | 'awaiting_approval';
-
 /**
  * What a booking is still waiting for, or null when it's confirmed. Only a pending booking *with* a reason waits:
  * right after checkout an automatically confirmed booking is briefly pending with no reason.
  */
-export function awaitingOf(g: Pick<Game, 'status' | 'pendingReason'>): PendingReason | null {
+export function awaitingOf(g: Pick<Game, 'status' | 'pendingReason'>): StorefrontAppointmentPendingReason | null {
 	return g.status === 'pending' && g.pendingReason ? g.pendingReason : null;
 }
 
@@ -74,9 +73,9 @@ export interface Game {
 	id: string;
 	/** Booking reference, e.g. "1042" */
 	ref: string;
-	status: string;
+	status: AppointmentStatusType;
 	/** Set while the booking waits for payment or the club's approval */
-	pendingReason: PendingReason | null;
+	pendingReason: StorefrontAppointmentPendingReason | null;
 	from: string;
 	to: string;
 	minutes: number;

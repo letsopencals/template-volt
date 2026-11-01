@@ -40,7 +40,7 @@ export function GameDetail({ appointmentId, cat, tz }: { appointmentId: string; 
 	const actionHandled = useRef(false);
 
 	const game = useMemo(
-		() => (appointment ? toGame(appointment as never, cat, (appointment.addOns ?? []).map((a) => ({ title: a.addOn?.title ?? 'Extra', quantity: a.quantity ?? 1 }))) : null),
+		() => (appointment ? toGame(appointment, cat, (appointment.addOns ?? []).map((a) => ({ title: a.addOn?.title ?? 'Extra', quantity: a.quantity ?? 1 }))) : null),
 		[appointment, cat],
 	);
 	const gameTz = game?.clubId ? (cat.clubs.find((c) => c.id === game.clubId)?.tz ?? tz) : tz;

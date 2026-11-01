@@ -4,13 +4,21 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { mutate } from 'swr';
-import type { CheckoutResponse as SdkCheckoutResponse, CheckoutStartResponse, CustomerProviderCatalogItem } from '@opencals/storefront-sdk';
+import type {
+	AppointmentDateRangeSlot,
+	AppointmentGuest,
+	CheckoutQuestionAnswer,
+	CheckoutResponse,
+	CheckoutStartResponse,
+	CreateAppointmentAddOn,
+	CustomerProviderCatalogItem,
+	ExistingOrderCustomer,
+	NewOrderCustomer,
+} from '@opencals/storefront-sdk';
 import { useCart } from '@/contexts/cart-context';
-import { patchSnapshot, type PaymentInstructions } from '@/lib/game-snapshot';
-import type { PendingReason } from '@/lib/game';
+import { patchSnapshot } from '@/lib/game-snapshot';
 
-/** Submit's response; `paymentInstructions` comes with manual payment methods (SDK 0.3.20+). */
-type CheckoutResponse = SdkCheckoutResponse & { paymentInstructions?: PaymentInstructions };
+type ProviderName = CustomerProviderCatalogItem['name'];
 
 /**
  * Hold + pay for a game, in the order the Storefront API expects:
@@ -20,22 +28,14 @@ type CheckoutResponse = SdkCheckoutResponse & { paymentInstructions?: PaymentIns
  * still choosing; the court is held at book().
  */
 export interface BookPayload {
-	slot: {
-		productId: string;
-		fromDate: string;
-		fromTime: string;
-		toDate: string;
-		toTime: string;
-		locationId: string | null;
-		staffMemberId: string | null;
-	};
+	slot: Required<AppointmentDateRangeSlot>;
 	numberOfAttendees: number;
-	addOns: { addOnId: string; quantity?: number }[];
-	customer: { kind: 'existing'; customerId: string } | { kind: 'new'; email: string; firstName?: string; lastName?: string };
-	checkoutQuestionAnswers: { questionId: string; question: string; answer: string }[];
+	addOns: CreateAppointmentAddOn[];
+	customer: Required<Pick<ExistingOrderCustomer, 'kind' | 'customerId'>> | (Required<Pick<NewOrderCustomer, 'kind' | 'email'>> & Pick<NewOrderCustomer, 'firstName' | 'lastName'>);
+	checkoutQuestionAnswers: CheckoutQuestionAnswer[];
 	customAttributes: Record<string, string>;
 	/** Crew emails, invited as guests (they get the booking emails; capacity is unaffected) */
-	guests?: { email: string }[];
+	guests?: AppointmentGuest[];
 }
 
 interface ApiFailure {
@@ -87,7 +87,7 @@ export function useGameCheckout(customerId: string | null) {
 	const router = useRouter();
 	const { cartId, setCart, clearCart } = useCart();
 	const [committedCartId, setCommittedCartId] = useState<string | null>(null);
-	const [provider, setProvider] = useState<string | null>(null);
+	const [provider, setProvider] = useState<ProviderName | null>(null);
 	const [paymentData, setPaymentData] = useState<CheckoutStartResponse | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -168,9 +168,8 @@ export function useGameCheckout(customerId: string | null) {
 	);
 
 	const finish = useCallback(
-		async (data: CheckoutResponse, providerName: string | null) => {
-			const appointments = (data.order?.lineItems ?? []).map((li) => li.appointment).filter(Boolean) as { status: string; pendingReason?: PendingReason | null }[];
-			const waiting = appointments.find((a) => a.status === 'pending' && a.pendingReason);
+		async (data: CheckoutResponse, providerName: ProviderName | null) => {
+			const waiting = (data.order?.lineItems ?? []).map((li) => li.appointment).find((a) => a?.status === 'pending' && a.pendingReason);
 			patchSnapshot({
 				orderId: data.order?.id ?? null,
 				ref: data.order?.name ?? '',
@@ -205,7 +204,7 @@ export function useGameCheckout(customerId: string | null) {
 	);
 
 	const submit = useCallback(
-		async (stripePaymentIntentId?: string, providerName: string | null = provider) => {
+		async (stripePaymentIntentId?: string, providerName: ProviderName | null = provider) => {
 			setSubmitting(true);
 			setError(null);
 			try {
@@ -222,7 +221,7 @@ export function useGameCheckout(customerId: string | null) {
 	 * a retried click) goes straight to that order instead: submitting the same cart returns it.
 	 */
 	const start = useCallback(
-		async (providerName: string): Promise<CheckoutStartResponse | null> => {
+		async (providerName: ProviderName): Promise<CheckoutStartResponse | null> => {
 			const res = await fetch('/api/checkout/start', {
 				method: 'POST',
 				headers: headers(),
@@ -262,7 +261,7 @@ export function useGameCheckout(customerId: string | null) {
 			try {
 				const data = await start(p.name);
 				if (!data) return;
-				if ((data.provider as string) === 'no_payment_required') {
+				if (data.provider === 'no_payment_required') {
 					await submit(undefined, data.provider);
 					return;
 				}

@@ -27,7 +27,7 @@ export function GamesBoard({ appointments, cat, tz }: { appointments: Appointmen
 	const me = session?.customer?.firstName ?? null;
 	// A pending appointment with no order is a cart hold, not a booking: leave it out.
 	const games = useMemo(
-		() => appointments.filter((a) => !(a.status === 'pending' && !a.orderLineItem)).map((a) => toGame(a as never, cat)),
+		() => appointments.filter((a) => !(a.status === 'pending' && !a.orderLineItem)).map((a) => toGame(a, cat)),
 		[appointments, cat],
 	);
 	const { upcoming, past } = useMemo(() => {

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { formatPrice } from '@/lib/format';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
-import type { OrderDetailResponse, OrderDetailLineItem, OrderDetailAppointment, AppointmentStatusType } from '@opencals/storefront-sdk';
+import type { OrderDetailResponse, OrderDetailLineItem, OrderDetailAppointment, AppointmentStatusType, StorefrontAppointmentPendingReason } from '@opencals/storefront-sdk';
 import { onSessionExpired } from '@/lib/session-expired';
 
 export default function OrderDetailPage() {
@@ -123,7 +123,7 @@ export default function OrderDetailPage() {
 														<p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">{appt.location.title}</p>
 													)}
 												</div>
-												<AppointmentStatusBadge status={appt.status} pendingReason={(appt as { pendingReason?: string | null }).pendingReason ?? null} />
+												<AppointmentStatusBadge status={appt.status} pendingReason={appt.pendingReason ?? null} />
 											</div>
 										</Link>
 								))}
@@ -241,7 +241,7 @@ export default function OrderDetailPage() {
 }
 
 function PaymentStatusBadge({ status }: { status: OrderDetailResponse['paymentStatus'] }) {
-	const config: Record<string, { bg: string; text: string; label: string }> = {
+	const config: Record<OrderDetailResponse['paymentStatus'], { bg: string; text: string; label: string }> = {
 		paid: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Paid' },
 		unpaid: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Unpaid' },
 		'partially-paid': { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Partially Paid' },
@@ -283,9 +283,9 @@ function RefundStatusBadge({ status }: { status: OrderDetailResponse['refundStat
 	);
 }
 
-const PENDING_LABEL: Record<string, string> = { awaiting_payment: 'Awaiting payment', awaiting_approval: 'Awaiting confirmation' };
+const PENDING_LABEL: Record<StorefrontAppointmentPendingReason, string> = { awaiting_payment: 'Awaiting payment', awaiting_approval: 'Awaiting confirmation' };
 
-function AppointmentStatusBadge({ status, pendingReason }: { status: AppointmentStatusType; pendingReason: string | null }) {
+function AppointmentStatusBadge({ status, pendingReason }: { status: AppointmentStatusType; pendingReason: StorefrontAppointmentPendingReason | null }) {
 	const config: Record<string, { bg: string; text: string; label: string }> = {
 		scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Scheduled' },
 		completed: { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: 'Completed' },
@@ -293,7 +293,7 @@ function AppointmentStatusBadge({ status, pendingReason }: { status: Appointment
 		pending: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Pending' },
 	};
 	// Pending with a reason waits for payment or the club; pending without one is being confirmed right now.
-	const reason = status === 'pending' ? (PENDING_LABEL[pendingReason ?? ''] as string | undefined) : undefined;
+	const reason = status === 'pending' && pendingReason ? PENDING_LABEL[pendingReason] : undefined;
 	const c = reason ? { ...config.pending!, label: reason } : status === 'pending' ? config.scheduled! : (config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status });
 	return (
 		<span className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${c.bg} ${c.text}`}>
