@@ -8,8 +8,6 @@ import { formatPrice } from '@/lib/format';
 import { StripePayment } from '@/components/booking/stripe-payment';
 import { BTN, Label } from '@/components/game/bits';
 
-type ProviderName = CustomerProviderCatalogItem['name'];
-
 export interface PaymentStepProps {
 	providers: CustomerProviderCatalogItem[];
 	provider: string | null;
@@ -31,9 +29,10 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const PANEL = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -8 }, transition: { duration: 0.4, ease: EASE } };
 
 /** Club words for the store's payment methods; anything else uses the store's own copy. */
-const COPY: Partial<Record<ProviderName, { title: string; note: string }>> = {
+const COPY: Partial<Record<string, { title: string; note: string }>> = {
 	cash: { title: 'Pay at the club', note: 'Card or cash at reception' },
-	bank_transfer: { title: 'Bank transfer', note: 'We email the details' },
+	bank_transfer: { title: 'Bank transfer', note: 'Bank details on the next screen' },
+	stripe_invoice: { title: 'Pay by invoice', note: 'A secure invoice link by email' },
 	stripe: { title: 'Card online', note: 'Pay now, secured by Stripe' },
 	no_payment_required: { title: 'Nothing to pay', note: 'This one is free' },
 };
@@ -128,13 +127,22 @@ const MethodTile = memo(function MethodTile({
 
 function OfflineSheet({ method: provider, total, currency, dateLabel, club, submitting, isExpired, onConfirmOffline }: PaymentStepProps & { method: CustomerProviderCatalogItem }) {
 	const free = provider.checkoutMode === 'none' || total <= 0;
-	const bank = provider.name === 'bank_transfer';
+	const name = provider.name as string;
+	const bank = name === 'bank_transfer';
+	const invoice = name === 'stripe_invoice';
+	const cash = name === 'cash';
 	const day = dateLabel ?? 'on the day';
+	// Each method says how it's paid; an unknown manual method stays generic (the store's description is on the tile).
 	const steps = free
-		? ['Confirm and you’re in', 'Your confirmation arrives by email', `See you at ${club}: ${day}`]
+		? ['Confirm the booking', 'Your confirmation arrives by email', `See you at ${club}: ${day}`]
 		: bank
-			? ['Confirm and you’re in', 'Bank details arrive by email', `Transfer before you play: ${day}`]
-			: ['Confirm and you’re in', 'Your confirmation arrives by email', `Pay at ${club} reception: ${day}`];
+			? ['Confirm the booking', 'Bank details on the next screen and by email', `Transfer before you play: ${day}`]
+			: invoice
+				? ['Confirm the booking', 'Your invoice arrives by email', `Pay it online before you play: ${day}`]
+				: cash
+					? ['Confirm the booking', 'Your confirmation arrives by email', `Pay at ${club} reception: ${day}`]
+					: ['Confirm the booking', 'How to pay arrives by email', `See you at ${club}: ${day}`];
+	const caption = bank ? 'by transfer' : invoice ? 'by invoice' : cash ? 'at reception' : 'to pay';
 
 	return (
 		<div className="overflow-hidden rounded-[24px] border border-[var(--color-primary)]/40 bg-[var(--color-bg-deep)]">
@@ -151,9 +159,17 @@ function OfflineSheet({ method: provider, total, currency, dateLabel, club, subm
 							</>
 						) : bank ? (
 							'Transfer before you play'
-						) : (
+						) : invoice ? (
+							<>
+								Book now, <span className="text-[var(--color-primary)]">pay by invoice.</span>
+							</>
+						) : cash ? (
 							<>
 								Book now, <span className="text-[var(--color-primary)]">pay at the club.</span>
+							</>
+						) : (
+							<>
+								Book now, <span className="text-[var(--color-primary)]">pay later.</span>
 							</>
 						)}
 					</p>
@@ -161,7 +177,7 @@ function OfflineSheet({ method: provider, total, currency, dateLabel, club, subm
 				{free ? null : (
 					<div className="sm:text-right">
 						<p className="heading-display text-4xl tabular-nums text-[var(--color-ink)]">{formatPrice(total, currency)}</p>
-						<p className="mt-1 text-xs text-[var(--color-ink-dim)]">{bank ? 'by transfer' : 'at reception'}</p>
+						<p className="mt-1 text-xs text-[var(--color-ink-dim)]">{caption}</p>
 					</div>
 				)}
 			</div>

@@ -26,16 +26,38 @@ export interface Receipt {
 	email: string | null;
 }
 
-export function orderReceipt(order: OrderDetailResponse): Receipt {
+/** "€24.00 to pay at the club", "€24.00 to pay by bank transfer"… per payment method; neutral when unknown. */
+export function dueLine(amount: number, currency: string | undefined, provider: string | null | undefined): string {
+	const sum = formatPrice(amount, currency);
+	switch (provider) {
+		case 'cash':
+			return `${sum} to pay at the club`;
+		case 'bank_transfer':
+			return `${sum} to pay by bank transfer`;
+		case 'stripe_invoice':
+			return `${sum} to pay by invoice`;
+		default:
+			return `${sum} to pay`;
+	}
+}
+
+/** The payment method on an order: the provider of its first transaction, if there is one. */
+export function orderProvider(order: Pick<OrderDetailResponse, 'transactions'>): string | null {
+	return order.transactions?.find((t) => t.provider)?.provider ?? null;
+}
+
+export function orderReceipt(order: OrderDetailResponse, provider: string | null = orderProvider(order)): Receipt {
 	const currency = order.paymentCurrencyCode;
 	const paid = order.isFullyPaid || order.paymentStatus === 'paid';
 	return {
 		line:
-			order.total <= 0
-				? 'Nothing to pay'
-				: paid
-					? `Paid ${formatPrice(order.paidTotal || order.total, currency)}`
-					: `${formatPrice(order.dueToPay, currency)} to pay at the club`,
+			(order.paymentStatus as string) === 'voided'
+				? 'Cancelled, not charged'
+				: order.total <= 0
+					? 'Nothing to pay'
+					: paid
+						? `Paid ${formatPrice(order.paidTotal || order.total, currency)}`
+						: dueLine(order.dueToPay, currency, provider),
 		ref: order.name,
 		email: order.customer?.email ?? order.customerEmail ?? null,
 	};

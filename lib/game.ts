@@ -13,6 +13,8 @@ export interface AppointmentLike {
 	id: string;
 	name: string;
 	status: string;
+	/** Why a booked appointment is still pending (SDK 0.3.20+); null once confirmed */
+	pendingReason?: PendingReason | null;
 	from: string;
 	to: string;
 	productId?: string;
@@ -47,6 +49,22 @@ export interface AppointmentLike {
 
 export type GameKind = 'court' | 'training';
 
+export type PendingReason = 'awaiting_payment' | 'awaiting_approval';
+
+/**
+ * What a booking is still waiting for, or null when it's confirmed. Only a pending booking *with* a reason waits:
+ * right after checkout an automatically confirmed booking is briefly pending with no reason.
+ */
+export function awaitingOf(g: Pick<Game, 'status' | 'pendingReason'>): PendingReason | null {
+	return g.status === 'pending' && g.pendingReason ? g.pendingReason : null;
+}
+
+/** "Awaiting payment" / "Awaiting confirmation" for a booking that waits, else null. */
+export function awaitingLabel(g: Pick<Game, 'status' | 'pendingReason'>): string | null {
+	const reason = awaitingOf(g);
+	return reason === 'awaiting_payment' ? 'Awaiting payment' : reason === 'awaiting_approval' ? 'Awaiting confirmation' : null;
+}
+
 export interface GameExtra {
 	title: string;
 	quantity: number;
@@ -57,6 +75,8 @@ export interface Game {
 	/** Booking reference, e.g. "1042" */
 	ref: string;
 	status: string;
+	/** Set while the booking waits for payment or the club's approval */
+	pendingReason: PendingReason | null;
 	from: string;
 	to: string;
 	minutes: number;
@@ -139,6 +159,7 @@ export function toGame(a: AppointmentLike, cat: Catalogue, extras?: GameExtra[])
 		id: a.id,
 		ref: a.name,
 		status: a.status,
+		pendingReason: a.pendingReason ?? null,
 		from: a.from,
 		to: a.to,
 		minutes,

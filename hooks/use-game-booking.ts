@@ -218,6 +218,7 @@ export function useGameBooking(cat: Catalogue, pick: GamePick) {
 				id: 'snapshot',
 				ref: '',
 				status: 'scheduled',
+				pendingReason: null,
 				from,
 				to,
 				minutes,
@@ -296,7 +297,7 @@ export function useGameBooking(cat: Catalogue, pick: GamePick) {
 				}
 				if (landed) {
 					setStep('payment');
-					saveSnapshot({ at: Date.now(), orderId: null, game: snapshotGame(landed.court, startIso, endIso!), me: firstName.trim() || null, email: email.trim() || null, total: estimate, currency: currency ?? 'EUR', payAtVenue: false });
+					saveSnapshot({ at: Date.now(), orderId: null, game: snapshotGame(landed.court, startIso, endIso!), me: firstName.trim() || null, email: email.trim() || null, total: estimate, currency: currency ?? 'EUR', provider: null, paymentInstructions: null });
 				}
 			} else if (slot && variant) {
 				const id = await checkout.book({
@@ -314,7 +315,7 @@ export function useGameBooking(cat: Catalogue, pick: GamePick) {
 				});
 				if (id) {
 					setStep('payment');
-					saveSnapshot({ at: Date.now(), orderId: null, game: snapshotGame(null, startIso, endIso!), me: firstName.trim() || null, email: email.trim() || null, total: estimate, currency: currency ?? 'EUR', payAtVenue: false });
+					saveSnapshot({ at: Date.now(), orderId: null, game: snapshotGame(null, startIso, endIso!), me: firstName.trim() || null, email: email.trim() || null, total: estimate, currency: currency ?? 'EUR', provider: null, paymentInstructions: null });
 				}
 			}
 		} finally {

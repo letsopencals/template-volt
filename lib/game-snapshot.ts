@@ -1,4 +1,15 @@
-import type { Game } from '@/lib/game';
+import type { Game, PendingReason } from '@/lib/game';
+
+/** How to pay a manual-payment order, as checkout submit returns it (SDK 0.3.20 `PaymentInstructions`). */
+export interface PaymentInstructions {
+	/** bank_transfer, cash or stripe_invoice */
+	provider: string;
+	/** Stripe invoice: the hosted page where the invoice is paid (null while it's being issued) */
+	hostedInvoiceUrl?: string | null;
+	/** Pay by this time (ISO 8601), or the booking is cancelled; null when there's no deadline */
+	dueAt?: string | null;
+	bankDetails?: { accountName?: string | null; bankName?: string | null; iban?: string | null; swift?: string | null } | null;
+}
 
 /**
  * The game the player just built, kept in sessionStorage so /thank-you can show the full match ticket even to a
@@ -14,8 +25,10 @@ export interface GameSnapshot {
 	email: string | null;
 	total: number;
 	currency: string;
-	/** Paid at the club rather than online */
-	payAtVenue: boolean;
+	/** The payment method used at checkout (stripe, cash, bank_transfer, stripe_invoice…) */
+	provider: string | null;
+	/** How to pay, for manual methods; only submit returns it, so the thank-you page reads it from here */
+	paymentInstructions: PaymentInstructions | null;
 }
 
 const KEY = 'volt:last-game';
@@ -29,11 +42,17 @@ export function saveSnapshot(s: GameSnapshot) {
 	}
 }
 
-export function patchSnapshot(patch: Partial<GameSnapshot> & { ref?: string }) {
+export function patchSnapshot(patch: Partial<GameSnapshot> & { ref?: string; status?: string; pendingReason?: PendingReason | null }) {
 	const s = readSnapshot();
 	if (!s) return;
-	const { ref, ...rest } = patch;
-	saveSnapshot({ ...s, ...rest, game: ref ? { ...s.game, ref } : s.game });
+	const { ref, status, pendingReason, ...rest } = patch;
+	const game = {
+		...s.game,
+		...(ref ? { ref } : {}),
+		...(status ? { status } : {}),
+		...(pendingReason !== undefined ? { pendingReason } : {}),
+	};
+	saveSnapshot({ ...s, ...rest, game });
 }
 
 export function readSnapshot(): GameSnapshot | null {

@@ -11,7 +11,7 @@ import type { AppointmentDetailResponse } from '@opencals/storefront-sdk';
 import { fetcher } from '@/lib/fetcher';
 import { formatPrice } from '@/lib/format';
 import { at, type Catalogue } from '@/lib/club';
-import { canChange, changeDeadline, directionsUrl, formatGap, gamePhase, icsHref, inviteText, rebookHref, toGame, untilText, type Game } from '@/lib/game';
+import { awaitingLabel, canChange, changeDeadline, directionsUrl, formatGap, gamePhase, icsHref, inviteText, rebookHref, toGame, untilText, type Game } from '@/lib/game';
 import { useNow } from '@/hooks/use-now';
 import { revalidateClubAvailability } from '@/hooks/use-game-checkout';
 import { MatchTicket } from '@/components/game/confirmation/match-ticket';
@@ -113,7 +113,8 @@ export function GameSheet({ game: g, tz, payment, onCancel, onReschedule, onInvi
 	const canMove = now != null && canChange(g, 'reschedule', now);
 	const canCancel = now != null && canChange(g, 'cancel', now);
 	const until = now == null ? null : untilText(g.from, now, tz);
-	const badge = phase === 'canceled' ? 'Cancelled' : phase === 'past' ? 'Played' : phase === 'now' ? 'Playing now' : until ? until[0]!.toUpperCase() + until.slice(1) : null;
+	const badge =
+		phase === 'canceled' ? 'Cancelled' : phase === 'past' ? 'Played' : phase === 'now' ? 'Playing now' : (awaitingLabel(g) ?? (until ? until[0]!.toUpperCase() + until.slice(1) : null));
 
 	return (
 		<div className="space-y-6">

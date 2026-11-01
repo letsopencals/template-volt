@@ -4,15 +4,19 @@ import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { mutate } from 'swr';
-import type { CheckoutStartResponse, CustomerProviderCatalogItem } from '@opencals/storefront-sdk';
+import type { CheckoutResponse as SdkCheckoutResponse, CheckoutStartResponse, CustomerProviderCatalogItem } from '@opencals/storefront-sdk';
 import { useCart } from '@/contexts/cart-context';
-import { patchSnapshot } from '@/lib/game-snapshot';
+import { patchSnapshot, type PaymentInstructions } from '@/lib/game-snapshot';
+import type { PendingReason } from '@/lib/game';
+
+/** Submit's response; `paymentInstructions` comes with manual payment methods (SDK 0.3.20+). */
+type CheckoutResponse = SdkCheckoutResponse & { paymentInstructions?: PaymentInstructions };
 
 /**
  * Hold + pay for a game, in the order the Storefront API expects:
  *   /api/book (the court or training place into a cart)
  *   → /api/checkout/start (provider) → /api/checkout/submit → /thank-you.
- * Offline methods (pay at the club) start + submit together on confirm. Nothing is held while the player is
+ * Offline methods (pay at the club, bank transfer, invoice, nothing to pay) start + submit together on confirm. Nothing is held while the player is
  * still choosing; the court is held at book().
  */
 export interface BookPayload {
@@ -34,9 +38,44 @@ export interface BookPayload {
 	guests?: { email: string }[];
 }
 
-async function readError(res: Response, fallback: string): Promise<{ message: string; fields: Record<string, string[]> }> {
+interface ApiFailure {
+	status: number;
+	message: string;
+	fields: Record<string, string[]>;
+	/** The API's reason, e.g. CART_EXPIRED, CHECKOUT_IN_PROGRESS, PAYMENT_NOT_AUTHORIZED */
+	code: string | null;
+	/** CART_ALREADY_CHECKED_OUT: the order the cart already became */
+	orderId: string | null;
+}
+
+async function readError(res: Response, fallback: string): Promise<ApiFailure> {
 	const data = await res.json().catch(() => null);
-	return { message: data?.error || fallback, fields: data?.errors ?? {} };
+	return {
+		status: res.status,
+		message: data?.error || fallback,
+		fields: data?.errors ?? {},
+		code: typeof data?.code === 'string' ? data.code : null,
+		orderId: typeof data?.orderId === 'string' ? data.orderId : null,
+	};
+}
+
+/** A failed checkout call, with what the API said so the flow can react to it. */
+class CheckoutError extends Error {
+	constructor(readonly failure: ApiFailure) {
+		super(failure.message);
+	}
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The player-facing line for a checkout failure. */
+function checkoutMessage(err: unknown, fallback: string): string {
+	if (!(err instanceof CheckoutError)) return err instanceof Error ? err.message : fallback;
+	const { code, status, message } = err.failure;
+	if (code === 'CART_EXPIRED') return 'Your hold ran out and someone took the time meanwhile. Go back and pick another time or court.';
+	if (code === 'CHECKOUT_IN_PROGRESS') return 'We’re still placing this booking. Give it a moment, then try again.';
+	if (code === 'PAYMENT_NOT_AUTHORIZED' || status === 402) return 'Your card wasn’t authorised and nothing was charged. Try again or use another card.';
+	return message;
 }
 
 /** Drop every club's availability in this tab after a booking change, so the hall and grid re-read. */
@@ -95,11 +134,19 @@ export function useGameCheckout(customerId: string | null) {
 		[headersFor, committedCartId, cartId, setCart],
 	);
 
-	const submit = useCallback(
-		async (stripePaymentIntentId?: string) => {
-			setSubmitting(true);
-			setError(null);
-			try {
+	/** The cart's hold is gone: drop it so the player can go back and pick another time. */
+	const dropExpiredHold = useCallback(() => {
+		clearCart();
+		setCommittedCartId(null);
+		setPaymentData(null);
+		setProvider(null);
+		revalidateClubAvailability();
+	}, [clearCart]);
+
+	/** Places the order. A submit racing another one (CHECKOUT_IN_PROGRESS) is retried a few times. */
+	const placeOrder = useCallback(
+		async (stripePaymentIntentId?: string): Promise<CheckoutResponse> => {
+			for (let attempt = 0; ; attempt++) {
 				const res = await fetch('/api/checkout/submit', {
 					method: 'POST',
 					headers: headers(),
@@ -108,44 +155,95 @@ export function useGameCheckout(customerId: string | null) {
 						...(stripePaymentIntentId ? { stripePaymentIntentId } : {}),
 					}),
 				});
-				if (!res.ok) throw new Error((await readError(res, 'Payment failed')).message);
-				const data = await res.json();
-				patchSnapshot({
-					orderId: data.order?.id ?? null,
-					ref: data.order?.name ?? '',
-					payAtVenue: provider === 'cash',
-					...(typeof data.order?.total === 'number' ? { total: data.order.total } : {}),
-				});
-				if (data.auth?.accessToken) {
-					await signIn('checkout-token', {
-						accessToken: data.auth.accessToken,
-						refreshToken: data.auth.refreshToken,
-						redirect: false,
-					});
+				if (res.ok) return res.json();
+				const failure = await readError(res, 'Payment failed');
+				if (failure.code === 'CHECKOUT_IN_PROGRESS' && attempt < 3) {
+					await wait(1500 * (attempt + 1));
+					continue;
 				}
-				clearCart();
-				router.push(`/thank-you?orderId=${data.order?.id ?? ''}`);
-			} catch (err) {
-				setError(err instanceof Error ? err.message : 'Payment failed');
-				setSubmitting(false);
+				throw new CheckoutError(failure);
 			}
 		},
-		[headers, clearCart, router, provider],
+		[headers],
 	);
 
+	const finish = useCallback(
+		async (data: CheckoutResponse, providerName: string | null) => {
+			const appointments = (data.order?.lineItems ?? []).map((li) => li.appointment).filter(Boolean) as { status: string; pendingReason?: PendingReason | null }[];
+			const waiting = appointments.find((a) => a.status === 'pending' && a.pendingReason);
+			patchSnapshot({
+				orderId: data.order?.id ?? null,
+				ref: data.order?.name ?? '',
+				provider: data.paymentInstructions?.provider ?? providerName,
+				paymentInstructions: data.paymentInstructions ?? null,
+				status: waiting ? 'pending' : 'scheduled',
+				pendingReason: waiting?.pendingReason ?? null,
+				...(typeof data.order?.total === 'number' ? { total: data.order.total } : {}),
+			});
+			if (data.auth?.accessToken) {
+				await signIn('checkout-token', {
+					accessToken: data.auth.accessToken,
+					refreshToken: data.auth.refreshToken,
+					redirect: false,
+				});
+			}
+			clearCart();
+			setSubmitting(false);
+			router.push(`/thank-you?orderId=${data.order?.id ?? ''}`);
+		},
+		[clearCart, router],
+	);
+
+	/** Turns a failed checkout into the right next step: an expired hold is dropped, everything else is shown. */
+	const fail = useCallback(
+		(err: unknown, fallback: string) => {
+			if (err instanceof CheckoutError && err.failure.code === 'CART_EXPIRED') dropExpiredHold();
+			setError(checkoutMessage(err, fallback));
+			setSubmitting(false);
+		},
+		[dropExpiredHold],
+	);
+
+	const submit = useCallback(
+		async (stripePaymentIntentId?: string, providerName: string | null = provider) => {
+			setSubmitting(true);
+			setError(null);
+			try {
+				await finish(await placeOrder(stripePaymentIntentId), providerName);
+			} catch (err) {
+				fail(err, 'Payment failed');
+			}
+		},
+		[placeOrder, finish, fail, provider],
+	);
+
+	/**
+	 * Starts checkout with a provider. A cart that already became an order (CART_ALREADY_CHECKED_OUT: a second tab,
+	 * a retried click) goes straight to that order instead: submitting the same cart returns it.
+	 */
 	const start = useCallback(
-		async (providerName: string): Promise<CheckoutStartResponse> => {
+		async (providerName: string): Promise<CheckoutStartResponse | null> => {
 			const res = await fetch('/api/checkout/start', {
 				method: 'POST',
 				headers: headers(),
 				body: JSON.stringify({ provider: providerName, ...(customerId ? { customer: { kind: 'existing', customerId } } : {}) }),
 			});
-			if (!res.ok) throw new Error((await readError(res, 'Could not start checkout')).message);
+			if (!res.ok) {
+				const failure = await readError(res, 'Could not start checkout');
+				if (failure.code !== 'CART_ALREADY_CHECKED_OUT') throw new CheckoutError(failure);
+				try {
+					await finish(await placeOrder(), providerName);
+				} catch {
+					clearCart();
+					router.push(failure.orderId ? `/thank-you?orderId=${failure.orderId}` : '/account');
+				}
+				return null;
+			}
 			const data: CheckoutStartResponse = await res.json();
 			setPaymentData(data);
 			return data;
 		},
-		[headers, customerId],
+		[headers, customerId, finish, placeOrder, clearCart, router],
 	);
 
 	/**
@@ -163,19 +261,20 @@ export function useGameCheckout(customerId: string | null) {
 			setSubmitting(true);
 			try {
 				const data = await start(p.name);
+				if (!data) return;
 				if ((data.provider as string) === 'no_payment_required') {
-					await submit();
+					await submit(undefined, data.provider);
 					return;
 				}
 				if (data.redirectUrl) window.location.href = data.redirectUrl;
 			} catch (err) {
-				setError(err instanceof Error ? err.message : 'Could not start checkout');
+				fail(err, 'Could not start checkout');
 				setProvider(null);
 			} finally {
 				setSubmitting(false);
 			}
 		},
-		[start, submit],
+		[start, submit, fail],
 	);
 
 	const confirmOffline = useCallback(async () => {
@@ -183,13 +282,14 @@ export function useGameCheckout(customerId: string | null) {
 		setError(null);
 		setSubmitting(true);
 		try {
-			await start(provider);
-			await submit();
+			const data = await start(provider);
+			if (!data) return;
+			// Manual (cash, bank transfer, invoice) and no-payment checkouts are placed straight after start.
+			await submit(undefined, data.provider ?? provider);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Could not confirm the booking');
-			setSubmitting(false);
+			fail(err, 'Could not confirm the booking');
 		}
-	}, [provider, start, submit]);
+	}, [provider, start, submit, fail]);
 
 	return { committedCartId, provider, paymentData, submitting, error, setError, fieldErrors, book, submit, selectProvider, confirmOffline };
 }

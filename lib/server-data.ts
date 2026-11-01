@@ -101,7 +101,9 @@ const loadCatalogue = unstable_cache(
 		const [products, locations, settings] = await Promise.all([
 			listAllProducts(),
 			LocationService.list({ query: { take: 100 }, throwOnError: true }).then((r) => r.data?.data ?? []),
-			StoreService.getStorePublicSettings().then((r) => r.data ?? null),
+			StoreService.getStorePublicSettings()
+				.then((r) => r.data ?? null)
+				.catch(() => null),
 		]);
 		return buildCatalogue(products, locations, settings?.settings?.timezone ?? 'UTC');
 	},

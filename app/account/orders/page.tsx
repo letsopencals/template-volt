@@ -15,8 +15,9 @@ type OrderWithId = OrderListItemResponse & { id: string };
 
 const STATUS: Record<string, { label: string; tone: string }> = {
 	paid: { label: 'Paid', tone: 'border-emerald-500/40 text-emerald-400' },
-	unpaid: { label: 'Pay at club', tone: 'border-[var(--color-primary)]/50 text-[var(--color-primary)]' },
+	unpaid: { label: 'To pay', tone: 'border-[var(--color-primary)]/50 text-[var(--color-primary)]' },
 	'partially-paid': { label: 'Part paid', tone: 'border-amber-500/40 text-amber-300' },
+	voided: { label: 'Cancelled, not charged', tone: 'border-[var(--color-line-strong)] text-[var(--color-ink-muted)]' },
 };
 
 /** Orders as receipts: date block, what was booked, total and payment state. */
@@ -53,7 +54,7 @@ export default function OrdersPage() {
 				<>
 					<ul className="mt-8 space-y-3">
 						{orders.map((order) => {
-							const s = STATUS[order.paymentStatus] ?? { label: order.paymentStatus, tone: 'border-[var(--color-line-strong)] text-[var(--color-ink-muted)]' };
+							const s = STATUS[order.paymentStatus] ?? { label: 'Payment', tone: 'border-[var(--color-line-strong)] text-[var(--color-ink-muted)]' };
 							return (
 								<li key={order.id}>
 									<Link

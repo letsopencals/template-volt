@@ -123,7 +123,7 @@ export default function OrderDetailPage() {
 														<p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">{appt.location.title}</p>
 													)}
 												</div>
-												<AppointmentStatusBadge status={appt.status} />
+												<AppointmentStatusBadge status={appt.status} pendingReason={(appt as { pendingReason?: string | null }).pendingReason ?? null} />
 											</div>
 										</Link>
 								))}
@@ -245,8 +245,9 @@ function PaymentStatusBadge({ status }: { status: OrderDetailResponse['paymentSt
 		paid: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Paid' },
 		unpaid: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Unpaid' },
 		'partially-paid': { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Partially Paid' },
+		voided: { bg: 'bg-white/5', text: 'text-[var(--color-ink-muted)]', label: 'Cancelled, not charged' },
 	};
-	const c = config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status };
+	const c = config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: 'Payment' };
 	return (
 		<span className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${c.bg} ${c.text}`}>
 			{c.label}
@@ -282,14 +283,18 @@ function RefundStatusBadge({ status }: { status: OrderDetailResponse['refundStat
 	);
 }
 
-function AppointmentStatusBadge({ status }: { status: AppointmentStatusType }) {
+const PENDING_LABEL: Record<string, string> = { awaiting_payment: 'Awaiting payment', awaiting_approval: 'Awaiting confirmation' };
+
+function AppointmentStatusBadge({ status, pendingReason }: { status: AppointmentStatusType; pendingReason: string | null }) {
 	const config: Record<string, { bg: string; text: string; label: string }> = {
 		scheduled: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Scheduled' },
 		completed: { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: 'Completed' },
 		canceled: { bg: 'bg-red-100', text: 'text-red-300', label: 'Canceled' },
 		pending: { bg: 'bg-amber-500/15', text: 'text-amber-300', label: 'Pending' },
 	};
-	const c = config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status };
+	// Pending with a reason waits for payment or the club; pending without one is being confirmed right now.
+	const reason = status === 'pending' ? (PENDING_LABEL[pendingReason ?? ''] as string | undefined) : undefined;
+	const c = reason ? { ...config.pending!, label: reason } : status === 'pending' ? config.scheduled! : (config[status] ?? { bg: 'bg-white/5', text: 'text-[var(--color-ink)]', label: status });
 	return (
 		<span className={`inline-block rounded-full px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] ${c.bg} ${c.text}`}>
 			{c.label}

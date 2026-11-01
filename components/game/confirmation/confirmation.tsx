@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import moment from 'moment-timezone';
 import { at } from '@/lib/club';
 import type { Receipt } from '@/lib/order';
-import { changeDeadline, directionsUrl, formatGap, gameName, gamePhase, icsHref, inviteText, rebookHref, untilText, type Game } from '@/lib/game';
+import { awaitingOf, changeDeadline, directionsUrl, formatGap, gameName, gamePhase, icsHref, inviteText, rebookHref, untilText, type Game } from '@/lib/game';
+import type { PaymentInstructions } from '@/lib/game-snapshot';
 import { siteConfig } from '@/lib/site-config';
 import { useNow } from '@/hooks/use-now';
 import { MatchTicket, SealedTicket } from '@/components/game/confirmation/match-ticket';
@@ -26,7 +27,25 @@ const isoMin = (iso: string) => Date.parse(iso) / 60000;
  * the free-cancellation line and "Same time next week?". Renders from the order for signed-in players, or from the
  * flow's snapshot for guests (`signedIn` false).
  */
-export function Confirmation({ games, me, receipt, tz, signedIn = true }: { games: Game[]; me: string | null; receipt: Receipt; tz: string; signedIn?: boolean }) {
+export function Confirmation({
+	games,
+	me,
+	receipt,
+	tz,
+	signedIn = true,
+	instructions = null,
+	dueAt = null,
+}: {
+	games: Game[];
+	me: string | null;
+	receipt: Receipt;
+	tz: string;
+	signedIn?: boolean;
+	/** How to pay a manual-payment booking (bank details, invoice link) */
+	instructions?: PaymentInstructions | null;
+	/** The order's payment deadline, when the instructions don't carry one */
+	dueAt?: string | null;
+}) {
 	const now = useNow(30_000);
 	const lead = games[0];
 	if (!lead) return <ConfirmationSignedOut orderId={null} signedIn={signedIn} />;
@@ -39,7 +58,27 @@ export function Confirmation({ games, me, receipt, tz, signedIn = true }: { game
 		? `/book?club=${lead.clubSlug}&sport=${lead.sport}&date=${nextWeek.format('YYYY-MM-DD')}${[60, 90, 120].includes(lead.minutes) ? `&length=${lead.minutes}` : ''}&time=${nextWeek.format('HH:mm')}`
 		: rebookHref(lead, tz);
 	const manage = signedIn ? (lead.id === 'snapshot' ? '/account' : `/account/appointments/${lead.id}`) : `/auth/sign-in?callbackUrl=${encodeURIComponent('/account')}`;
-	const headline = court ? (me ? `Game on, ${me}!` : 'Game on!') : me ? `See you on court, ${me}` : 'See you on court';
+	// Waiting for payment or the club's approval: the booking is received, not confirmed.
+	const awaiting = games.map(awaitingOf).find(Boolean) ?? null;
+	const headline = awaiting
+		? me
+			? `Almost there, ${me}`
+			: 'Almost there'
+		: court
+			? me
+				? `Game on, ${me}!`
+				: 'Game on!'
+			: me
+				? `See you on court, ${me}`
+				: 'See you on court';
+	const status = awaiting === 'awaiting_payment' ? 'Received · awaiting payment' : awaiting === 'awaiting_approval' ? 'Received · awaiting the club’s confirmation' : 'Confirmed';
+	const next =
+		awaiting === 'awaiting_payment'
+			? 'It’s confirmed as soon as your payment arrives; how to pay is below.'
+			: awaiting === 'awaiting_approval'
+				? 'The club confirms this one by hand. We’ll email you the moment it’s confirmed.'
+				: 'Your ticket is below; the confirmation is on its way by email.';
+	const showPay = !!instructions || awaiting === 'awaiting_payment';
 
 	return (
 		<div className="bg-[var(--color-bg)]">
@@ -53,7 +92,7 @@ export function Confirmation({ games, me, receipt, tz, signedIn = true }: { game
 							<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-primary)] opacity-60" />
 							<span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--color-primary)]" />
 						</span>
-						<Label className="text-[var(--color-primary)]">Booked{until && phase !== 'past' ? ` · ${until}` : ''}</Label>
+						<Label className="text-[var(--color-primary)]">{status}{!awaiting && until && phase !== 'past' ? ` · ${until}` : ''}</Label>
 					</motion.p>
 					<motion.h1 {...RISE(0.2)} className="heading-display mt-4 max-w-4xl text-4xl text-white sm:text-6xl">
 						{headline}
@@ -61,7 +100,7 @@ export function Confirmation({ games, me, receipt, tz, signedIn = true }: { game
 						<span className="text-[var(--color-primary)]">{lead.clubTitle}</span>
 					</motion.h1>
 					<motion.p {...RISE(0.3)} className="mt-5 max-w-2xl text-base text-white/75">
-						{gameName(lead)}, {at(isoMin(lead.from), tz, 'dddd D MMMM')} at {at(isoMin(lead.from), tz, 'HH:mm')}. Your ticket is below; the confirmation is on its way by email.
+						{gameName(lead)}, {at(isoMin(lead.from), tz, 'dddd D MMMM')} at {at(isoMin(lead.from), tz, 'HH:mm')}. {next}
 					</motion.p>
 				</div>
 			</section>
@@ -87,9 +126,15 @@ export function Confirmation({ games, me, receipt, tz, signedIn = true }: { game
 					<span className="ml-auto px-4 py-3 text-xs text-[var(--color-ink-muted)]">
 						<strong className="font-semibold text-[var(--color-ink)]">{receipt.line}</strong>
 						{receipt.ref ? ` · #${receipt.ref}` : ''}
-						{receipt.email ? <span className="block text-[var(--color-ink-dim)]">Confirmation sent to {receipt.email}</span> : null}
+						{receipt.email ? <span className="block text-[var(--color-ink-dim)]">{awaiting ? 'Booking details' : 'Confirmation'} sent to {receipt.email}</span> : null}
 					</span>
 				</motion.nav>
+
+				{showPay ? (
+					<motion.div {...RISE(0.6)}>
+						<PayPanel instructions={instructions} dueAt={instructions?.dueAt ?? dueAt} amount={receipt.line} reference={receipt.ref} tz={tz} />
+					</motion.div>
+				) : null}
 
 				<motion.div {...IN_VIEW} className="grid gap-4 pt-4 md:grid-cols-3">
 					<Box title={court ? 'Your crew' : 'Who’s coming'}>
@@ -191,6 +236,68 @@ export function Confirmation({ games, me, receipt, tz, signedIn = true }: { game
 	);
 }
 
+const METHOD: Record<string, string> = { bank_transfer: 'Bank transfer', stripe_invoice: 'Pay by invoice', cash: 'Pay at the club' };
+
+/**
+ * How to pay a booking that's still owed: the invoice link, the bank details or "pay at reception", and the deadline.
+ * Without instructions (the page was reloaded in another tab) it points to the email, which carries the same details.
+ */
+function PayPanel({ instructions, dueAt, amount, reference, tz }: { instructions: PaymentInstructions | null; dueAt: string | null | undefined; amount: string; reference: string | null; tz: string }) {
+	const invoiceUrl = instructions?.hostedInvoiceUrl?.startsWith('https://') ? instructions.hostedInvoiceUrl : null;
+	const bank = instructions?.bankDetails;
+	const rows = bank
+		? ([
+				['Account name', bank.accountName],
+				['Bank', bank.bankName],
+				['IBAN / account', bank.iban],
+				['SWIFT / BIC', bank.swift],
+				['Reference', reference ? `#${reference}` : null],
+			].filter(([, v]) => v) as [string, string][])
+		: [];
+	const provider = instructions?.provider ?? '';
+
+	return (
+		<div className="overflow-hidden rounded-[24px] border border-[var(--color-primary)]/40 bg-[var(--color-bg-deep)]">
+			<div className="flex flex-wrap items-end justify-between gap-4 px-6 py-6 sm:px-8">
+				<div>
+					<Label className="text-[var(--color-primary)]">{METHOD[provider] ?? 'Payment'}</Label>
+					<p className="heading-display mt-2 text-2xl text-[var(--color-ink)]">{amount}</p>
+				</div>
+				{dueAt ? (
+					<p className="text-sm text-[var(--color-ink-muted)] sm:text-right">
+						Pay by <strong className="text-[var(--color-ink)]">{at(isoMin(dueAt), tz, 'ddd D MMM, HH:mm')}</strong>
+						<span className="block text-xs text-[var(--color-ink-dim)]">Unpaid bookings are released after that.</span>
+					</p>
+				) : null}
+			</div>
+			<div className="border-t border-[var(--color-line)] px-6 py-5 text-sm text-[var(--color-ink-muted)] sm:px-8">
+				{invoiceUrl ? (
+					<a href={invoiceUrl} target="_blank" rel="noreferrer" className={BTN}>
+						Pay invoice
+					</a>
+				) : provider === 'stripe_invoice' ? (
+					<p>Your invoice is on its way by email, with a secure link to pay it.</p>
+				) : rows.length ? (
+					<dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+						{rows.map(([k, v]) => (
+							<div key={k}>
+								<dt>
+									<Label className="text-[var(--color-ink-dim)]">{k}</Label>
+								</dt>
+								<dd className="mt-1 break-all font-mono text-[var(--color-ink)]">{v}</dd>
+							</div>
+						))}
+					</dl>
+				) : provider === 'cash' ? (
+					<p>Pay at reception when you check in, by card or cash.</p>
+				) : (
+					<p>Check your email for the payment details.</p>
+				)}
+			</div>
+		</div>
+	);
+}
+
 function Box({ title, children }: { title: string; children: React.ReactNode }) {
 	return (
 		<div className="flex flex-col overflow-hidden rounded-[24px] border border-[var(--color-line)] bg-[var(--color-surface)]">
@@ -219,13 +326,13 @@ export function ConfirmationSignedOut({ orderId, signedIn }: { orderId: string |
 		<section className="bg-[var(--color-bg)] pb-24 pt-32 md:pt-40">
 			<div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-10">
 				<motion.p {...RISE(0.1)}>
-					<Label className="text-[var(--color-primary)]">Booked</Label>
+					<Label className="text-[var(--color-primary)]">Received</Label>
 				</motion.p>
 				<motion.h1 {...RISE(0.2)} className="heading-display mt-3 text-5xl text-[var(--color-ink)]">
-					Game <span className="text-[var(--color-primary)]">on!</span>
+					Booking <span className="text-[var(--color-primary)]">received.</span>
 				</motion.h1>
 				<motion.p {...RISE(0.3)} className="mt-5 max-w-2xl text-base text-[var(--color-ink-muted)]">
-					Your confirmation is in your inbox: court, time and directions.
+					The details are in your inbox: court, time, directions and, if anything is still to pay, how to pay it.
 					{signedIn ? '' : ` Sign in with the email you booked with to see it here, change it or cancel it. ${siteConfig.name} keeps every game in one account.`}
 				</motion.p>
 				<motion.div {...RISE(0.45)} className="mt-10">

@@ -8,7 +8,7 @@ import { fetcher } from '@/lib/fetcher';
 import { formatPrice } from '@/lib/format';
 import type { Catalogue } from '@/lib/club';
 import { readSnapshot, type GameSnapshot } from '@/lib/game-snapshot';
-import { orderGames, orderReceipt } from '@/lib/order';
+import { dueLine, orderGames, orderProvider, orderReceipt } from '@/lib/order';
 import { Confirmation, ConfirmationLoading, ConfirmationSignedOut } from '@/components/game/confirmation/confirmation';
 
 /**
@@ -31,17 +31,31 @@ export function ConfirmationView({ orderId, cat, tz }: { orderId: string | null;
 	const gameTz = games[0]?.clubId ? (cat.clubs.find((c) => c.id === games[0]!.clubId)?.tz ?? tz) : tz;
 
 	if (status === 'loading' || isLoading || snap === undefined) return <ConfirmationLoading />;
+	// Payment instructions only come back from checkout submit, so they live in this tab's snapshot.
+	const instructions = snap?.paymentInstructions ?? null;
 	if (order && games.length) {
-		return <Confirmation games={games} me={order.customerFirstName || order.billingFirstName || session?.customer?.firstName || null} receipt={orderReceipt(order)} tz={gameTz} />;
+		const provider = instructions?.provider ?? snap?.provider ?? orderProvider(order);
+		return (
+			<Confirmation
+				games={games}
+				me={order.customerFirstName || order.billingFirstName || session?.customer?.firstName || null}
+				receipt={orderReceipt(order, provider)}
+				instructions={instructions}
+				dueAt={order.paymentDueAt ?? null}
+				tz={gameTz}
+			/>
+		);
 	}
 	if (snap) {
+		// Card payments have no instructions; a manual method (or an older snapshot without a provider) still owes.
+		const owes = !!instructions || (snap.provider != null && snap.provider !== 'stripe');
 		const receipt = {
-			line: snap.total <= 0 ? 'Nothing to pay' : snap.payAtVenue ? `${formatPrice(snap.total, snap.currency)} to pay at the club` : `Paid ${formatPrice(snap.total, snap.currency)}`,
+			line: snap.total <= 0 || snap.provider === 'no_payment_required' ? 'Nothing to pay' : owes ? dueLine(snap.total, snap.currency, instructions?.provider ?? snap.provider) : `Paid ${formatPrice(snap.total, snap.currency)}`,
 			ref: snap.game.ref || null,
 			email: snap.email,
 		};
 		const snapTz = cat.clubs.find((c) => c.id === snap.game.clubId)?.tz ?? tz;
-		return <Confirmation games={[snap.game]} me={snap.me} receipt={receipt} tz={snapTz} signedIn={status === 'authenticated'} />;
+		return <Confirmation games={[snap.game]} me={snap.me} receipt={receipt} instructions={instructions} tz={snapTz} signedIn={status === 'authenticated'} />;
 	}
 	return <ConfirmationSignedOut orderId={orderId} signedIn={status === 'authenticated'} />;
 }

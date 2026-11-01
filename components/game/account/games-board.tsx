@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import type { AppointmentListItemResponse } from '@opencals/storefront-sdk';
 import { at, formatLength, type Catalogue } from '@/lib/club';
-import { gameName, gamePhase, rebookHref, toGame, untilText, type Game, type GamePhase } from '@/lib/game';
+import { awaitingLabel, gameName, gamePhase, rebookHref, toGame, untilText, type Game, type GamePhase } from '@/lib/game';
 import { useNow } from '@/hooks/use-now';
 import { MatchTicket } from '@/components/game/confirmation/match-ticket';
 import { BTN, BTN_GHOST, Label, Monogram } from '@/components/game/bits';
@@ -25,7 +25,11 @@ export function GamesBoard({ appointments, cat, tz }: { appointments: Appointmen
 	const now = useNow(60_000);
 	const { data: session } = useSession();
 	const me = session?.customer?.firstName ?? null;
-	const games = useMemo(() => appointments.map((a) => toGame(a as never, cat)), [appointments, cat]);
+	// A pending appointment with no order is a cart hold, not a booking: leave it out.
+	const games = useMemo(
+		() => appointments.filter((a) => !(a.status === 'pending' && !a.orderLineItem)).map((a) => toGame(a as never, cat)),
+		[appointments, cat],
+	);
 	const { upcoming, past } = useMemo(() => {
 		const t = now ?? 0;
 		const up: Game[] = [];
@@ -96,7 +100,7 @@ export function GamesBoard({ appointments, cat, tz }: { appointments: Appointmen
 					<div className="space-y-8">
 						<motion.div {...ITEM(0)}>
 							<Link href={`/account/appointments/${next.id}`} className="block transition-transform hover:-translate-y-0.5">
-								<MatchTicket game={next} tz={tz} me={me} until={Date.parse(next.from) - now} badge={badgeFor(gamePhase(next, now, tz), untilText(next.from, now, tz))} />
+								<MatchTicket game={next} tz={tz} me={me} until={Date.parse(next.from) - now} badge={awaitingLabel(next) ?? badgeFor(gamePhase(next, now, tz), untilText(next.from, now, tz))} />
 							</Link>
 						</motion.div>
 						{laterCourts.length ? <TicketGrid title="Upcoming games" games={laterCourts} tz={tz} me={me} now={now} offset={1} /> : null}
@@ -152,7 +156,7 @@ function TicketGrid({ title, games, tz, me, now, offset }: { title: string; game
 				{games.map((g, i) => (
 					<motion.div key={g.id} {...ITEM(i + offset)}>
 						<Link href={`/account/appointments/${g.id}`} className="block transition-transform hover:-translate-y-0.5">
-							<MatchTicket game={g} tz={tz} me={me} compact badge={badgeFor(gamePhase(g, now, tz), untilText(g.from, now, tz))} />
+							<MatchTicket game={g} tz={tz} me={me} compact badge={awaitingLabel(g) ?? badgeFor(gamePhase(g, now, tz), untilText(g.from, now, tz))} />
 						</Link>
 					</motion.div>
 				))}
