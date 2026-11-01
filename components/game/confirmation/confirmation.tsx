@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import moment from 'moment-timezone';
-import type { PaymentInstructions } from '@opencals/storefront-sdk';
+import type { PaymentInstructions, PaymentProviderName } from '@opencals/storefront-sdk';
 import { at } from '@/lib/club';
 import type { Receipt } from '@/lib/order';
 import { awaitingOf, changeDeadline, directionsUrl, formatGap, gameName, gamePhase, icsHref, inviteText, rebookHref, untilText, type Game } from '@/lib/game';
@@ -236,7 +236,7 @@ export function Confirmation({
 	);
 }
 
-const METHOD: Record<string, string> = { bank_transfer: 'Bank transfer', stripe_invoice: 'Pay by invoice', cash: 'Pay at the club' };
+const METHOD: Partial<Record<PaymentProviderName, string>> = { bank_transfer: 'Bank transfer', stripe_invoice: 'Pay by invoice', cash: 'Pay at the club' };
 
 /**
  * How to pay a booking that's still owed: the invoice link, the bank details or "pay at reception", and the deadline.
@@ -254,13 +254,13 @@ function PayPanel({ instructions, dueAt, amount, reference, tz }: { instructions
 				['Reference', reference ? `#${reference}` : null],
 			].filter(([, v]) => v) as [string, string][])
 		: [];
-	const provider = instructions?.provider ?? '';
+	const provider = instructions?.provider ?? null;
 
 	return (
 		<div className="overflow-hidden rounded-[24px] border border-[var(--color-primary)]/40 bg-[var(--color-bg-deep)]">
 			<div className="flex flex-wrap items-end justify-between gap-4 px-6 py-6 sm:px-8">
 				<div>
-					<Label className="text-[var(--color-primary)]">{METHOD[provider] ?? 'Payment'}</Label>
+					<Label className="text-[var(--color-primary)]">{(provider ? METHOD[provider] : undefined) ?? 'Payment'}</Label>
 					<p className="heading-display mt-2 text-2xl text-[var(--color-ink)]">{amount}</p>
 				</div>
 				{dueAt ? (

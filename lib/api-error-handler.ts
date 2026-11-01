@@ -1,16 +1,21 @@
-import { OpencalsApiError } from '@opencals/storefront-sdk';
+import { OpencalsApiError, type CheckoutErrorResponse } from '@opencals/storefront-sdk';
 import { NextResponse } from 'next/server';
 
-/** A string field of the API's error body, e.g. `orderId` (CART_ALREADY_CHECKED_OUT) or `paymentStatus` (402). */
-function bodyField(err: OpencalsApiError, key: string): string | undefined {
-	const value = err.body?.[key];
-	return typeof value === 'string' ? value : undefined;
+/**
+ * The extra fields a checkout error carries: `orderId` (CART_ALREADY_CHECKED_OUT) and `paymentStatus`
+ * (PAYMENT_NOT_AUTHORIZED). Other errors share the body without them, so every field is optional.
+ */
+function checkoutErrorBody(err: OpencalsApiError): Partial<CheckoutErrorResponse> {
+	const body = (err.body ?? {}) as Partial<CheckoutErrorResponse>;
+	return {
+		...(typeof body.orderId === 'string' && { orderId: body.orderId }),
+		...(typeof body.paymentStatus === 'string' && { paymentStatus: body.paymentStatus }),
+	};
 }
 
 export function handleApiError(err: unknown, fallbackMessage = 'Internal server error') {
 	if (err instanceof OpencalsApiError) {
-		const orderId = bodyField(err, 'orderId');
-		const paymentStatus = bodyField(err, 'paymentStatus');
+		const { orderId, paymentStatus } = checkoutErrorBody(err);
 		return NextResponse.json(
 			{
 				error: err.message,

@@ -6,8 +6,8 @@ import {
 	type AppointmentGuest,
 	type CheckoutQuestionAnswer,
 	type CreateAppointmentAddOn,
-	type ExistingOrderCustomer,
-	type NewOrderCustomer,
+	type ExistingAppointmentCustomer,
+	type NewAppointmentCustomer,
 } from '@opencals/storefront-sdk';
 import { getAccessToken } from '@/lib/api-auth';
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,8 +15,8 @@ import { revalidateTag } from 'next/cache';
 import { handleApiError } from '@/lib/api-error-handler';
 
 /** The booker as the flow sends it; `kind` picks which of the two shapes is meant. */
-type CustomerInput = Required<Pick<ExistingOrderCustomer | NewOrderCustomer, 'kind'>> &
-	Partial<Pick<ExistingOrderCustomer, 'customerId'> & Pick<NewOrderCustomer, 'email' | 'firstName' | 'lastName'>>;
+type CustomerInput = Required<Pick<ExistingAppointmentCustomer | NewAppointmentCustomer, 'kind'>> &
+	Partial<Pick<ExistingAppointmentCustomer, 'customerId'> & Pick<NewAppointmentCustomer, 'email' | 'firstName' | 'lastName'>>;
 
 export async function POST(request: NextRequest) {
 	const cartIdHeader = request.headers.get('X-Cart-Id') ?? '';

@@ -3,14 +3,14 @@
 import { memo, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
-import type { CheckoutStartResponse, CustomerProviderCatalogItem } from '@opencals/storefront-sdk';
+import type { CheckoutStartResponse, CustomerProviderCatalogItem, PaymentProviderName } from '@opencals/storefront-sdk';
 import { formatPrice } from '@/lib/format';
 import { StripePayment } from '@/components/booking/stripe-payment';
 import { BTN, Label } from '@/components/game/bits';
 
 export interface PaymentStepProps {
 	providers: CustomerProviderCatalogItem[];
-	provider: CustomerProviderCatalogItem['name'] | null;
+	provider: PaymentProviderName | null;
 	paymentData: CheckoutStartResponse | null;
 	submitting: boolean;
 	isExpired: boolean;
@@ -29,7 +29,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const PANEL = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -8 }, transition: { duration: 0.4, ease: EASE } };
 
 /** Club words for the store's payment methods; anything else uses the store's own copy. */
-const COPY: Partial<Record<CustomerProviderCatalogItem['name'], { title: string; note: string }>> = {
+const COPY: Partial<Record<PaymentProviderName, { title: string; note: string }>> = {
 	cash: { title: 'Pay at the club', note: 'Card or cash at reception' },
 	bank_transfer: { title: 'Bank transfer', note: 'Bank details on the next screen' },
 	stripe_invoice: { title: 'Pay by invoice', note: 'A secure invoice link by email' },

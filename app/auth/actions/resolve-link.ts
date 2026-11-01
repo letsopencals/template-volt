@@ -1,15 +1,27 @@
 'use server';
 
 import '@/lib/opencals';
-import { AuthService } from '@opencals/storefront-sdk';
+import { AuthService, OpencalsApiError, zMagicLinkErrorCode, type MagicLinkErrorCode } from '@opencals/storefront-sdk';
 import { signIn } from '@/lib/auth';
 
 export type ResolveLinkResult = {
 	success: boolean;
 	error?: string;
-	errorCode?: 'TOKEN_EXPIRED' | 'TOKEN_USED' | 'TOKEN_INVALID';
+	errorCode?: MagicLinkErrorCode;
 	redirectPath?: string;
 };
+
+/** The API's reason for a rejected link (`code` on the 400 body), when it sent a known one. */
+function magicLinkCode(err: unknown): MagicLinkErrorCode | undefined {
+	const code =
+		err instanceof OpencalsApiError
+			? (err.code ?? err.body?.code)
+			: err && typeof err === 'object' && 'code' in err
+				? err.code
+				: undefined;
+	const parsed = zMagicLinkErrorCode.safeParse(code);
+	return parsed.success ? parsed.data : undefined;
+}
 
 /**
  * Resolves a magic-link token (`/link/{token}`). For most purposes the backend
@@ -38,9 +50,13 @@ export async function resolveLink(token: string): Promise<ResolveLinkResult> {
 			err && typeof err === 'object' && 'message' in err
 				? String((err as { message: unknown }).message)
 				: 'Invalid link';
-		let errorCode: ResolveLinkResult['errorCode'] = 'TOKEN_INVALID';
-		if (message.includes('expired')) errorCode = 'TOKEN_EXPIRED';
-		else if (message.includes('used')) errorCode = 'TOKEN_USED';
+		// Older backends sent no `code`: fall back to guessing it from the message.
+		let errorCode = magicLinkCode(err);
+		if (!errorCode) {
+			errorCode = 'TOKEN_INVALID';
+			if (message.includes('expired')) errorCode = 'TOKEN_EXPIRED';
+			else if (message.includes('used')) errorCode = 'TOKEN_USED';
+		}
 		return { success: false, error: message, errorCode };
 	}
 }

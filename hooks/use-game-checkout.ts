@@ -7,18 +7,19 @@ import { mutate } from 'swr';
 import type {
 	AppointmentDateRangeSlot,
 	AppointmentGuest,
+	CheckoutErrorCode,
+	CheckoutErrorResponse,
 	CheckoutQuestionAnswer,
 	CheckoutResponse,
 	CheckoutStartResponse,
 	CreateAppointmentAddOn,
 	CustomerProviderCatalogItem,
-	ExistingOrderCustomer,
-	NewOrderCustomer,
+	ExistingAppointmentCustomer,
+	NewAppointmentCustomer,
+	PaymentProviderName,
 } from '@opencals/storefront-sdk';
 import { useCart } from '@/contexts/cart-context';
 import { patchSnapshot } from '@/lib/game-snapshot';
-
-type ProviderName = CustomerProviderCatalogItem['name'];
 
 /**
  * Hold + pay for a game, in the order the Storefront API expects:
@@ -31,7 +32,7 @@ export interface BookPayload {
 	slot: Required<AppointmentDateRangeSlot>;
 	numberOfAttendees: number;
 	addOns: CreateAppointmentAddOn[];
-	customer: Required<Pick<ExistingOrderCustomer, 'kind' | 'customerId'>> | (Required<Pick<NewOrderCustomer, 'kind' | 'email'>> & Pick<NewOrderCustomer, 'firstName' | 'lastName'>);
+	customer: Required<Pick<ExistingAppointmentCustomer, 'kind' | 'customerId'>> | (Required<Pick<NewAppointmentCustomer, 'kind' | 'email'>> & Pick<NewAppointmentCustomer, 'firstName' | 'lastName'>);
 	checkoutQuestionAnswers: CheckoutQuestionAnswer[];
 	customAttributes: Record<string, string>;
 	/** Crew emails, invited as guests (they get the booking emails; capacity is unaffected) */
@@ -42,14 +43,20 @@ interface ApiFailure {
 	status: number;
 	message: string;
 	fields: Record<string, string[]>;
-	/** The API's reason, e.g. CART_EXPIRED, CHECKOUT_IN_PROGRESS, PAYMENT_NOT_AUTHORIZED */
-	code: string | null;
+	/** The API's checkout reason, e.g. CART_EXPIRED, CHECKOUT_IN_PROGRESS, PAYMENT_NOT_AUTHORIZED */
+	code: CheckoutErrorCode | null;
 	/** CART_ALREADY_CHECKED_OUT: the order the cart already became */
-	orderId: string | null;
+	orderId: CheckoutErrorResponse['orderId'] | null;
 }
 
+/** The error JSON our `/api/*` routes return (see `handleApiError`). */
+type ApiErrorJson = Partial<Pick<CheckoutErrorResponse, 'code' | 'orderId' | 'paymentStatus'>> & {
+	error?: string;
+	errors?: Record<string, string[]>;
+};
+
 async function readError(res: Response, fallback: string): Promise<ApiFailure> {
-	const data = await res.json().catch(() => null);
+	const data: ApiErrorJson | null = await res.json().catch(() => null);
 	return {
 		status: res.status,
 		message: data?.error || fallback,
@@ -87,7 +94,7 @@ export function useGameCheckout(customerId: string | null) {
 	const router = useRouter();
 	const { cartId, setCart, clearCart } = useCart();
 	const [committedCartId, setCommittedCartId] = useState<string | null>(null);
-	const [provider, setProvider] = useState<ProviderName | null>(null);
+	const [provider, setProvider] = useState<PaymentProviderName | null>(null);
 	const [paymentData, setPaymentData] = useState<CheckoutStartResponse | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -168,7 +175,7 @@ export function useGameCheckout(customerId: string | null) {
 	);
 
 	const finish = useCallback(
-		async (data: CheckoutResponse, providerName: ProviderName | null) => {
+		async (data: CheckoutResponse, providerName: PaymentProviderName | null) => {
 			const waiting = (data.order?.lineItems ?? []).map((li) => li.appointment).find((a) => a?.status === 'pending' && a.pendingReason);
 			patchSnapshot({
 				orderId: data.order?.id ?? null,
@@ -204,7 +211,7 @@ export function useGameCheckout(customerId: string | null) {
 	);
 
 	const submit = useCallback(
-		async (stripePaymentIntentId?: string, providerName: ProviderName | null = provider) => {
+		async (stripePaymentIntentId?: string, providerName: PaymentProviderName | null = provider) => {
 			setSubmitting(true);
 			setError(null);
 			try {
@@ -221,7 +228,7 @@ export function useGameCheckout(customerId: string | null) {
 	 * a retried click) goes straight to that order instead: submitting the same cart returns it.
 	 */
 	const start = useCallback(
-		async (providerName: ProviderName): Promise<CheckoutStartResponse | null> => {
+		async (providerName: PaymentProviderName): Promise<CheckoutStartResponse | null> => {
 			const res = await fetch('/api/checkout/start', {
 				method: 'POST',
 				headers: headers(),

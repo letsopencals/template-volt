@@ -1,4 +1,4 @@
-import type { PaymentInstructions } from '@opencals/storefront-sdk';
+import type { PaymentInstructions, PaymentProviderName } from '@opencals/storefront-sdk';
 import type { Game } from '@/lib/game';
 
 /**
@@ -16,7 +16,7 @@ export interface GameSnapshot {
 	total: number;
 	currency: string;
 	/** The payment method used at checkout (stripe, cash, bank_transfer, stripe_invoice…) */
-	provider: string | null;
+	provider: PaymentProviderName | null;
 	/** How to pay, for manual methods; only submit returns it, so the thank-you page reads it from here */
 	paymentInstructions: PaymentInstructions | null;
 }

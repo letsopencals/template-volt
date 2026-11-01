@@ -1,4 +1,4 @@
-import type { OrderDetailResponse, OrderDetailTransaction } from '@opencals/storefront-sdk';
+import type { OrderDetailResponse, PaymentProviderName } from '@opencals/storefront-sdk';
 import { formatPrice } from '@/lib/format';
 import type { Catalogue } from '@/lib/club';
 import { toGame, type Game } from '@/lib/game';
@@ -27,7 +27,7 @@ export interface Receipt {
 }
 
 /** "€24.00 to pay at the club", "€24.00 to pay by bank transfer"… per payment method; neutral when unknown. */
-export function dueLine(amount: number, currency: string | undefined, provider: string | null | undefined): string {
+export function dueLine(amount: number, currency: string | undefined, provider: PaymentProviderName | null | undefined): string {
 	const sum = formatPrice(amount, currency);
 	switch (provider) {
 		case 'cash':
@@ -42,11 +42,11 @@ export function dueLine(amount: number, currency: string | undefined, provider: 
 }
 
 /** The payment method on an order: the provider of its first transaction, if there is one. */
-export function orderProvider(order: Pick<OrderDetailResponse, 'transactions'>): OrderDetailTransaction['provider'] | null {
+export function orderProvider(order: Pick<OrderDetailResponse, 'transactions'>): PaymentProviderName | null {
 	return order.transactions?.find((t) => t.provider)?.provider ?? null;
 }
 
-export function orderReceipt(order: OrderDetailResponse, provider: string | null = orderProvider(order)): Receipt {
+export function orderReceipt(order: OrderDetailResponse, provider: PaymentProviderName | null = orderProvider(order)): Receipt {
 	const currency = order.paymentCurrencyCode;
 	const paid = order.isFullyPaid || order.paymentStatus === 'paid';
 	return {
