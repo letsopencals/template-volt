@@ -1,8 +1,10 @@
 'use client';
 
 import {
+	cloneElement,
 	createContext,
 	forwardRef,
+	isValidElement,
 	useContext,
 	useId,
 	type HTMLAttributes,
@@ -103,11 +105,15 @@ interface FormControlProps {
 	className?: string;
 }
 
+/** Wraps the field's control and marks it `aria-invalid` / `aria-describedby` (the FormMessage) while it has an error. */
 const FormControl = forwardRef<HTMLDivElement, FormControlProps>(
 	({ children, className }, ref) => {
+		const { error, formMessageId } = useFormField();
 		return (
 			<div ref={ref} className={className}>
-				{children}
+				{error && isValidElement<{ 'aria-invalid'?: boolean; 'aria-describedby'?: string }>(children)
+					? cloneElement(children, { 'aria-invalid': true, 'aria-describedby': formMessageId })
+					: children}
 			</div>
 		);
 	},

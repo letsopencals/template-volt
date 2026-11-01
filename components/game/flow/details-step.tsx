@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { GameBooking } from '@/hooks/use-game-booking';
 import { Input, Textarea } from '@/components/ui/input';
 import { BTN, ErrorNote, Field, Label } from '@/components/game/bits';
+import { fieldA11y } from '@/lib/field-errors';
 
 /** Who's booking, plus the store's checkout questions. Continuing holds the court (or place). */
 export function DetailsStep({ b, signedIn }: { b: GameBooking; signedIn: boolean }) {
@@ -20,14 +21,14 @@ export function DetailsStep({ b, signedIn }: { b: GameBooking; signedIn: boolean
 			}}
 		>
 			<div className="grid gap-4 sm:grid-cols-2">
-				<Field label="Email" required error={fe.email?.[0]} wide>
-					<Input type="email" required autoComplete="email" value={b.email} onChange={(e) => b.setEmail(e.target.value)} readOnly={signedIn} placeholder="you@example.com" />
+				<Field id="details-email" label="Email" required error={fe.email} wide>
+					<Input id="details-email" type="email" required autoComplete="email" value={b.email} onChange={(e) => b.setEmail(e.target.value)} readOnly={signedIn} placeholder="you@example.com" {...fieldA11y('details-email', fe.email)} />
 				</Field>
-				<Field label="First name" error={fe.firstName?.[0]}>
-					<Input autoComplete="given-name" value={b.firstName} onChange={(e) => b.setFirstName(e.target.value)} />
+				<Field id="details-first" label="First name" error={fe.firstName}>
+					<Input id="details-first" autoComplete="given-name" value={b.firstName} onChange={(e) => b.setFirstName(e.target.value)} {...fieldA11y('details-first', fe.firstName)} />
 				</Field>
-				<Field label="Last name" error={fe.lastName?.[0]}>
-					<Input autoComplete="family-name" value={b.lastName} onChange={(e) => b.setLastName(e.target.value)} />
+				<Field id="details-last" label="Last name" error={fe.lastName}>
+					<Input id="details-last" autoComplete="family-name" value={b.lastName} onChange={(e) => b.setLastName(e.target.value)} {...fieldA11y('details-last', fe.lastName)} />
 				</Field>
 				<p className="text-sm leading-relaxed text-[var(--color-ink-muted)] sm:col-span-2">
 					{signedIn ? (

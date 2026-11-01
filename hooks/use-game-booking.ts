@@ -202,6 +202,30 @@ export function useGameBooking(cat: Catalogue, pick: GamePick) {
 	/** Each player's share of the court for a full four (or two for singles). */
 	const each = chosen ? gamePrice / onCourt : null;
 
+	// Editing a details field clears the error the API put under it.
+	const { clearFieldError } = checkout;
+	const editEmail = useCallback(
+		(v: string) => {
+			setEmail(v);
+			clearFieldError('email');
+		},
+		[clearFieldError],
+	);
+	const editFirstName = useCallback(
+		(v: string) => {
+			setFirstName(v);
+			clearFieldError('firstName');
+		},
+		[clearFieldError],
+	);
+	const editLastName = useCallback(
+		(v: string) => {
+			setLastName(v);
+			clearFieldError('lastName');
+		},
+		[clearFieldError],
+	);
+
 	const next = useCallback(() => setStep((s) => steps[Math.min(steps.length - 1, steps.indexOf(s) + 1)]!), [steps]);
 
 	const requiredMissing = questions.some((q) => q.required && !answers[q.id]?.trim());
@@ -372,11 +396,11 @@ export function useGameBooking(cat: Catalogue, pick: GamePick) {
 		kitList,
 		// details
 		email,
-		setEmail,
+		setEmail: editEmail,
 		firstName,
-		setFirstName,
+		setFirstName: editFirstName,
 		lastName,
-		setLastName,
+		setLastName: editLastName,
 		customerId,
 		questions,
 		answers,

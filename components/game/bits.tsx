@@ -75,16 +75,25 @@ export function ErrorNote({ children }: { children: React.ReactNode }) {
 	);
 }
 
-export function Field({ label, required, error, hint, wide, children }: { label: string; required?: boolean; error?: string; hint?: string; wide?: boolean; children: React.ReactNode }) {
+/** A labelled control. With `id`, the hint and error get `${id}-hint` / `${id}-error` for the control's `fieldA11y(id, …)`. */
+export function Field({ id, label, required, error, hint, wide, children }: { id?: string; label: string; required?: boolean; error?: string; hint?: string; wide?: boolean; children: React.ReactNode }) {
 	return (
 		<label className={clsx('block', wide && 'sm:col-span-2')}>
 			<Label className="text-[var(--color-ink-muted)]">
 				{label}
 				{required ? <span className="text-[var(--color-primary)]"> *</span> : null}
 			</Label>
-			{hint ? <span className="mt-1 block text-xs text-[var(--color-ink-dim)]">{hint}</span> : null}
+			{hint ? (
+				<span id={id && `${id}-hint`} className="mt-1 block text-xs text-[var(--color-ink-dim)]">
+					{hint}
+				</span>
+			) : null}
 			<span className="mt-2 block">{children}</span>
-			{error ? <span className="mt-1 block text-xs text-red-300">{error}</span> : null}
+			{error ? (
+				<span id={id && `${id}-error`} className="mt-1 block text-xs text-red-300">
+					{error}
+				</span>
+			) : null}
 		</label>
 	);
 }

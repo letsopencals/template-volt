@@ -23,6 +23,8 @@ export function handleApiError(err: unknown, fallbackMessage = 'Internal server 
 				...(orderId && { orderId }),
 				...(paymentStatus && { paymentStatus }),
 				...(Object.keys(err.toFieldErrors()).length > 0 && { errors: err.toFieldErrors() }),
+				// The API's own field errors, full dotted paths (`customer.email`), for placing under each field (`lib/field-errors.ts`).
+				...(err.errors?.length ? { fieldErrors: err.errors } : {}),
 			},
 			{ status: err.status },
 		);

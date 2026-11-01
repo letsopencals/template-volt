@@ -20,6 +20,10 @@ import type {
 } from '@opencals/storefront-sdk';
 import { useCart } from '@/contexts/cart-context';
 import { patchSnapshot } from '@/lib/game-snapshot';
+import { mapFieldErrors, withoutField, type ApiFieldErrors, type FieldErrors } from '@/lib/field-errors';
+
+/** The details step's fields, as named in `fieldErrors`. API paths match on their end (`customer.email` → `email`). */
+const DETAILS_FIELDS = ['email', 'firstName', 'lastName'] as const;
 
 /**
  * Hold + pay for a game, in the order the Storefront API expects:
@@ -42,7 +46,10 @@ export interface BookPayload {
 interface ApiFailure {
 	status: number;
 	message: string;
-	fields: Record<string, string[]>;
+	/** Errors placed under the details fields. */
+	fields: FieldErrors;
+	/** For the banner when some errors are placed under fields: only the ones that couldn't be (may be empty). */
+	unplaced: string;
 	/** The API's checkout reason, e.g. CART_EXPIRED, CHECKOUT_IN_PROGRESS, PAYMENT_NOT_AUTHORIZED */
 	code: CheckoutErrorCode | null;
 	/** CART_ALREADY_CHECKED_OUT: the order the cart already became */
@@ -52,15 +59,17 @@ interface ApiFailure {
 /** The error JSON our `/api/*` routes return (see `handleApiError`). */
 type ApiErrorJson = Partial<Pick<CheckoutErrorResponse, 'code' | 'orderId' | 'paymentStatus'>> & {
 	error?: string;
-	errors?: Record<string, string[]>;
+	fieldErrors?: ApiFieldErrors;
 };
 
 async function readError(res: Response, fallback: string): Promise<ApiFailure> {
 	const data: ApiErrorJson | null = await res.json().catch(() => null);
+	const { fields, unmapped } = mapFieldErrors(data?.fieldErrors, DETAILS_FIELDS);
 	return {
 		status: res.status,
 		message: data?.error || fallback,
-		fields: data?.errors ?? {},
+		fields,
+		unplaced: unmapped.join(' '),
 		code: typeof data?.code === 'string' ? data.code : null,
 		orderId: typeof data?.orderId === 'string' ? data.orderId : null,
 	};
@@ -98,7 +107,9 @@ export function useGameCheckout(customerId: string | null) {
 	const [paymentData, setPaymentData] = useState<CheckoutStartResponse | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+	const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+	/** Editing a details field clears its error. */
+	const clearFieldError = useCallback((field: string) => setFieldErrors((e) => withoutField(e, field)), []);
 
 	const headersFor = useCallback(
 		(id: string | null): Record<string, string> => ({ 'Content-Type': 'application/json', ...(id ? { 'X-Cart-Id': id } : {}) }),
@@ -120,12 +131,14 @@ export function useGameCheckout(customerId: string | null) {
 				body: JSON.stringify(payload),
 			});
 			if (!res.ok) {
-				const { message, fields } = await readError(res, 'That time was just taken. Pick another one.');
+				const { message, fields, unplaced } = await readError(res, 'That time was just taken. Pick another one.');
 				const taken = /maximum attendees|not available|already booked|no longer available/i.test(message);
 				if (taken) revalidateClubAvailability();
 				if (!quiet) {
 					setFieldErrors(fields);
-					setError(taken ? 'Someone just booked this at that time. Go back and pick another time or court.' : message);
+					// Errors shown under their field leave the banner for the rest only.
+					const placed = Object.keys(fields).length > 0;
+					setError(taken ? 'Someone just booked this at that time. Go back and pick another time or court.' : placed ? unplaced || null : message);
 				}
 				return null;
 			}
@@ -297,5 +310,5 @@ export function useGameCheckout(customerId: string | null) {
 		}
 	}, [provider, start, submit, fail]);
 
-	return { committedCartId, provider, paymentData, submitting, error, setError, fieldErrors, book, submit, selectProvider, confirmOffline };
+	return { committedCartId, provider, paymentData, submitting, error, setError, fieldErrors, clearFieldError, book, submit, selectProvider, confirmOffline };
 }

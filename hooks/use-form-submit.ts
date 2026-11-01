@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { FieldPath, FieldValues, UseFormReturn } from 'react-hook-form';
+import { mapFieldErrors } from '@/lib/field-errors';
 import { useApiRequest } from './use-api-request';
 
 interface UseFormSubmitOptions<TData> {
@@ -31,18 +32,28 @@ export function useFormSubmit<TFormValues extends FieldValues, TData = unknown>(
 		onSuccess,
 	});
 
+	// The API's field errors, matched to this form's fields by the end of their path (`customer.firstName` → `firstName`).
+	const placed = useMemo(
+		() => (request.apiFieldErrors ? mapFieldErrors(request.apiFieldErrors, Object.keys(form.getValues())) : null),
+		[request.apiFieldErrors, form],
+	);
+
 	useEffect(() => {
-		if (request.fieldErrors) {
-			for (const [field, message] of Object.entries(request.fieldErrors)) {
+		const fields = placed ? placed.fields : request.fieldErrors;
+		if (fields) {
+			for (const [field, message] of Object.entries(fields)) {
 				form.setError(field as FieldPath<TFormValues>, { type: 'server', message });
 			}
 		}
-	}, [request.fieldErrors, form]);
+	}, [placed, request.fieldErrors, form]);
+
+	// The banner keeps only what couldn't go under a field.
+	const error = placed && Object.keys(placed.fields).length > 0 ? placed.unmapped.join(' ') || null : request.error;
 
 	return {
 		submit: request.execute,
 		isSubmitting: request.loading,
-		error: request.error,
+		error,
 		clearError: request.reset,
 	};
 }
